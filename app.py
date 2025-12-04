@@ -1017,9 +1017,7 @@ def get_custom_css():
         .fade-in {{
             animation: fadeIn 0.5s ease-out;
         }}
-    </style>
-    """
-        
+
         .timeline-week {{
             background: linear-gradient(145deg, {COLORS['card_light']} 0%, {COLORS['dark_bg']} 100%);
             border-radius: 12px;
@@ -1030,29 +1028,38 @@ def get_custom_css():
             opacity: 0;
             transform: translateX(-20px);
         }}
-        
+
         .timeline-week.current {{
             border-left-color: {COLORS['success']};
             box-shadow: 0 0 20px rgba(74, 222, 128, 0.2);
             animation: slideInFade 0.6s ease-out forwards, pulseGlow 3s infinite;
         }}
-        
+
         @keyframes slideInFade {{
+            from {{
+                opacity: 0;
+                transform: translateX(-20px);
+            }}
             to {{
                 opacity: 1;
                 transform: translateX(0);
             }}
         }}
-        
+
         @keyframes pulseGlow {{
-            0%, 100% {{ box-shadow: 0 0 20px rgba(74, 222, 128, 0.2); }}
-            50% {{ box-shadow: 0 0 30px rgba(74, 222, 128, 0.4); }}
+            0%, 100% {{
+                box-shadow: 0 0 20px rgba(74, 222, 128, 0.2);
+            }}
+            50% {{
+                box-shadow: 0 0 30px rgba(74, 222, 128, 0.4);
+            }}
         }}
+
         .finance-positive {{ color: {COLORS['success']}; }}
         .finance-negative {{ color: {COLORS['danger']}; }}
-        
+
         .streamlit-expanderHeader {{ background: rgba(212, 175, 55, 0.1); border-radius: 8px; }}
-        
+
         hr {{ border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.3), transparent); margin: 24px 0; }}
 
         {get_mobile_optimized_css()}
