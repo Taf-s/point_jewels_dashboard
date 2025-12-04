@@ -58,22 +58,35 @@ pytest test_dashboard.py::TestTaskStats
 
 ## Quick Start
 
-### Option 1: Local Installation
+### Option 1: Local Development
 
 ```bash
 # 1. Navigate to the dashboard folder
 cd point_jewels_dashboard
 
-# 2. Install dependencies
+# 2. Install production dependencies
 pip install -r requirements.txt
 
-# 3. Run the dashboard
+# 3. (Optional) Install development dependencies for testing
+pip install -r requirements-dev.txt
+
+# 4. Run the dashboard
 streamlit run app.py
 ```
 
 The dashboard will open in your browser at `http://localhost:8501`
 
-### Option 2: Using Replit
+### Option 2: Streamlit Cloud Deployment
+
+1. Push your code to GitHub
+2. Go to [share.streamlit.io](https://share.streamlit.io)
+3. Connect your GitHub repository
+4. Deploy using `app.py` as the main file
+5. The `requirements.txt` file contains only production dependencies
+
+**Note:** `requirements-dev.txt` contains testing tools and is not needed for deployment.
+
+### Option 3: Using Replit
 
 1. Go to [replit.com](https://replit.com)
 2. Create new Python Repl
