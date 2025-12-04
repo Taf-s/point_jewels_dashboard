@@ -86,6 +86,11 @@ with st.sidebar:
 
 def render_dashboard_page():
     """Render the main dashboard page."""
+    # Load data at the start of the function
+    data = load_data()
+    stats = get_task_stats(data['tasks'])
+    progress = int((stats['completed'] / stats['total']) * 100) if stats['total'] > 0 else 0
+
     col1, col2 = st.columns([3, 1])
     with col1:
         st.markdown(f"# {ICONS['dashboard']} Project Dashboard")
@@ -93,6 +98,8 @@ def render_dashboard_page():
     with col2:
         if st.button(f"{ICONS['refresh']} Refresh"):
             data = load_data()
+            stats = get_task_stats(data['tasks'])
+            progress = int((stats['completed'] / stats['total']) * 100) if stats['total'] > 0 else 0
             st.rerun()
 
     st.markdown("---")
