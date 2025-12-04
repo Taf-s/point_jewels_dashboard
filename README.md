@@ -1,18 +1,60 @@
-# 💎 Point Jewels Project Manager Dashboard
+# 💎 Point Jewels Dashboard
 
-A beautiful Streamlit-powered project management dashboard for your website development project.
+A comprehensive project management dashboard for the Point Jewels jewelry business, built with Streamlit and featuring Phase 3 enhancements including mobile optimization, smart suggestions, and advanced accessibility.
 
-## Features
+## 🚀 Quick Start
 
-- 🏠 **Dashboard** - Strategic overview with this week's priorities & one-click actions
-- ✅ **Tasks** - Smart filtering by week/status/priority with inline editing
-- 💰 **Finances** - Real-time cash flow tracking with budget allocation pie chart
-- 📅 **Timeline** - 6-week roadmap with milestones & task tracking per week
-- 👥 **Contacts** - Strategic communication notes for each stakeholder
-- 📝 **Communications** - Ready-to-send message templates (daughters, Jared, Liza)
-- ⚙️ **Settings** - Week control, data management, JSON export
+### Prerequisites
 
-## Principles Applied
+- Python 3.9+
+- Virtual environment
+
+### Setup
+
+```bash
+# Create virtual environment
+python -m venv .venv
+
+# Activate environment
+source .venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+### Run the Dashboard
+
+```bash
+# Using the provided script (recommended - no warnings)
+./run_dashboard.sh
+
+# Or manually
+source .venv/bin/activate
+streamlit run app.py
+```
+
+The dashboard will be available at `http://localhost:8501`
+
+## ✨ Features
+
+### Phase 3 Enhancements
+
+- 📱 **Mobile Optimization**: Responsive design with touch-friendly controls
+- 🧠 **Smart Suggestions**: AI-powered task suggestions based on project context
+- ♿ **Accessibility**: Full ARIA support, keyboard navigation, screen reader compatibility
+- ⚡ **Performance Caching**: Optimized data loading and rendering
+- 🔔 **Advanced Notifications**: Intelligent alerts for deadlines and milestones
+
+### Core Functionality
+
+- 📊 **Project Dashboard**: Real-time progress tracking with visual indicators
+- ✅ **Task Management**: Drag-and-drop task organization with priority levels
+- 💰 **Financial Overview**: Click-to-edit budgets with automatic calculations
+- 📈 **Timeline Tracking**: 6-week project timeline with milestone management
+- 👥 **Contact Management**: Client and stakeholder communication tracking
+- 💬 **Communications**: Message templates and update automation
+
+## 🛠️ Development
 
 ### Never Split the Difference
 
@@ -28,22 +70,26 @@ A beautiful Streamlit-powered project management dashboard for your website deve
 - **Single responsibility**: Each function does one thing well
 - **Test-Driven**: Comprehensive unit tests ensure reliability
 
-## Testing
+## 🛠️ Development
 
-The dashboard includes comprehensive unit tests to ensure robustness:
+### Code Quality
+
+- Linting with Ruff (auto-fixable issues resolved)
+- Unit tests with pytest (14 test cases passing)
+- HTML escaping for security
+- Type hints throughout
+
+### Testing
 
 ```bash
 # Run all tests
 pytest
 
-# Run with verbose output
-pytest -v
+# Run with coverage
+pytest --cov=app
 
-# Run specific test file
-pytest test_dashboard.py
-
-# Run specific test class
-pytest test_dashboard.py::TestTaskStats
+# Run linting
+ruff check .
 ```
 
 **Test Coverage:**
@@ -55,6 +101,14 @@ pytest test_dashboard.py::TestTaskStats
 - ✅ Data persistence (JSON load/save)
 - ✅ Data structure validation
 - ✅ Integration tests
+
+## 🔒 Security
+
+- HTML injection prevention with `html_escape` on all user content
+- Input validation on financial forms (0-10M range limits)
+- Secure data persistence with JSON
+- No external API dependencies
+- XSS protection on task cards, payment cards, and notifications
 
 ## Quick Start
 
@@ -119,14 +173,18 @@ The dashboard will open in your browser at `http://localhost:8501`
 | **Jared** (Designer)      | Structured check-ins          | Monday call scripts, payment tracking  |
 | **You** (Manager)         | Everything                    | Dashboard control center               |
 
-## File Structure
+## 📁 Project Structure
 
 ```
 point_jewels_dashboard/
-├── app.py              # Main Streamlit application
-├── requirements.txt    # Python dependencies
-├── project_data.json   # Auto-generated project data (created on first run)
-└── README.md          # This file
+├── app.py                 # Main application with Phase 3 features
+├── test_dashboard.py      # Unit tests (14 test cases)
+├── project_data.json      # Data persistence
+├── requirements.txt       # Python dependencies
+├── requirements-dev.txt   # Development dependencies
+├── run_dashboard.sh       # Launch script (no warnings)
+├── pytest.ini            # Test configuration
+└── README.md             # This documentation
 ```
 
 ## Customization

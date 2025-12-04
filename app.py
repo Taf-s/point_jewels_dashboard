@@ -625,6 +625,7 @@ def editable_metric(label: str, value: float, key: str, prefix: str = "R", suffi
                         f"New {label}",
                         value=float(value),
                         min_value=0.0,
+                        max_value=10000000.0,  # Max 10M to prevent unreasonable values
                         step=1000.0,
                         format="%.0f",
                         help=f"Enter new value for {label.lower()}"
@@ -949,9 +950,17 @@ def get_custom_css():
         .financial-card {{
             background: rgba(255,255,255,0.05);
             border-radius: 12px;
-            padding: 20px;
+            padding: 24px;
             text-align: center;
             border: 1px solid rgba(212, 175, 55, 0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }}
+
+        .financial-card:hover {{
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(212, 175, 55, 0.15);
+            border-color: rgba(212, 175, 55, 0.3);
         }}
 
         .financial-card.income {{
@@ -1041,7 +1050,7 @@ def get_custom_css():
             background: linear-gradient(145deg, {COLORS['card_light']} 0%, {COLORS['dark_bg']} 100%);
             border-radius: 12px;
             padding: 16px;
-            margin: 8px 0;
+            margin: 12px 0;
             border-left: 4px solid {COLORS['gold']};
             animation: slideInFade 0.6s ease-out forwards;
             opacity: 0;
@@ -1371,11 +1380,11 @@ if page == f"{ICONS['dashboard']} Dashboard":
         <div style="font-size: 18px; color: {COLORS['gold']}; margin-bottom: 8px;">💰 Financial Health</div>
         <div style="display: flex; justify-content: space-around; align-items: center; margin-bottom: 12px;">
             <div style="text-align: center;">
-                {render_progress_ring(budget_used, 70, "#f59e0b", "")}
+                {render_progress_ring(budget_used, 80, "#f59e0b", "")}
                 <div style="font-size: 12px; color: {COLORS['text_muted']}; margin-top: 4px;">Budget</div>
             </div>
             <div style="text-align: center;">
-                {render_progress_ring(abs(profit_margin), 70, "#10b981" if profit_margin > 20 else "#ef4444" if profit_margin < 0 else "#f59e0b", "")}
+                {render_progress_ring(abs(profit_margin), 80, "#10b981" if profit_margin > 20 else "#ef4444" if profit_margin < 0 else "#f59e0b", "")}
                 <div style="font-size: 12px; color: {COLORS['text_muted']}; margin-top: 4px;">Profit</div>
             </div>
         </div>
@@ -1473,7 +1482,7 @@ if page == f"{ICONS['dashboard']} Dashboard":
 
         col_a, col_b = st.columns([1, 2])
         with col_a:
-            timeline_ring = render_progress_ring(timeline_progress, 70, "#8b5cf6", "Timeline")
+            timeline_ring = render_progress_ring(timeline_progress, 80, "#8b5cf6", "Timeline")
             st.markdown(timeline_ring, unsafe_allow_html=True)
 
         with col_b:
