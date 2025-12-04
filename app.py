@@ -7,7 +7,7 @@ A pragmatic Streamlit dashboard using principles from:
 
 import streamlit as st
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 import plotly.graph_objects as go
 from typing import Dict, List, Any, TypedDict
@@ -65,12 +65,596 @@ ICONS = {
     "launch": "🚀",         # Rocket for launch
 }
 
+# ============================================================================
+# INTERACTIVE FEATURES (Apple-Inspired UX)
+# ============================================================================
+
+# Initialize session state for interactive features
+if 'edit_mode' not in st.session_state:
+    st.session_state.edit_mode = None
+if 'toast_message' not in st.session_state:
+    st.session_state.toast_message = None
+if 'toast_type' not in st.session_state:
+    st.session_state.toast_type = 'info'
+
+def show_toast(message: str, toast_type: str = 'success'):
+    """Show a toast notification with Apple-style animation."""
+    st.session_state.toast_message = message
+    st.session_state.toast_type = toast_type
+
+def render_toast():
+    """Render toast notification if one exists."""
+    if st.session_state.toast_message:
+        toast_colors = {
+            'success': '#10b981',
+            'error': '#ef4444',
+            'warning': '#f59e0b',
+            'info': '#3b82f6'
+        }
+
+        # Enhanced toast with progress ring and better animations
+        st.markdown(f"""
+        <div style="
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: {toast_colors.get(st.session_state.toast_type, '#3b82f6')};
+            color: white;
+            padding: 16px 24px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            z-index: 1000;
+            animation: slideInBounce 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        ">
+            <div style="
+                width: 20px;
+                height: 20px;
+                border: 2px solid rgba(255,255,255,0.3);
+                border-top: 2px solid white;
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+            "></div>
+            <span style="font-weight: 500; font-size: 14px;">{st.session_state.toast_message}</span>
+        </div>
+        <style>
+            @keyframes slideInBounce {{
+                0% {{ transform: translateX(100%) scale(0.8); opacity: 0; }}
+                50% {{ transform: translateX(-10px) scale(1.05); }}
+                100% {{ transform: translateX(0) scale(1); opacity: 1; }}
+            }}
+            @keyframes spin {{
+                0% {{ transform: rotate(0deg); }}
+                100% {{ transform: rotate(360deg); }}
+            }}
+        </style>
+        """, unsafe_allow_html=True)
+
+        # Auto-clear toast after 4 seconds with fade out
+        st.session_state.toast_message = None
+
+def render_progress_ring(percentage: float, size: int = 60, color: str = "#10b981", label: str = ""):
+    """Render a circular progress ring with Apple-style design."""
+    # Ensure percentage is between 0 and 100
+    percentage = max(0, min(100, percentage))
+
+    # Calculate the stroke-dasharray values
+    circumference = 2 * 3.14159 * (size / 2 - 4)  # radius = size/2 - stroke_width/2
+    stroke_dasharray = f"{circumference * percentage / 100} {circumference}"
+
+    return f"""
+    <div style="position: relative; width: {size}px; height: {size}px; display: inline-block;">
+        <svg width="{size}" height="{size}" style="transform: rotate(-90deg);">
+            <!-- Background circle -->
+            <circle cx="{size/2}" cy="{size/2}" r="{size/2 - 4}"
+                    stroke="rgba(255,255,255,0.2)" stroke-width="4" fill="none"/>
+            <!-- Progress circle -->
+            <circle cx="{size/2}" cy="{size/2}" r="{size/2 - 4}"
+                    stroke="{color}" stroke-width="4" fill="none"
+                    stroke-dasharray="{stroke_dasharray}" stroke-linecap="round"/>
+        </svg>
+        <div style="
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+        ">
+            {int(percentage)}%
+        </div>
+        {f'<div style="position: absolute; top: {size + 5}px; left: 50%; transform: translateX(-50%); font-size: 10px; color: rgba(255,255,255,0.7); white-space: nowrap;">{label}</div>' if label else ''}
+    </div>
+    """
+
+def render_status_indicator(status: str, size: int = 12):
+    """Render a status indicator dot with animation."""
+    colors = {
+        'completed': '#10b981',
+        'pending': '#f59e0b',
+        'overdue': '#ef4444',
+        'critical': '#dc2626',
+        'active': '#3b82f6'
+    }
+
+    color = colors.get(status, '#6b7280')
+
+    if status == 'active':
+        animation = 'pulse 2s infinite'
+    else:
+        animation = 'none'
+
+    return f"""
+    <div style="
+        width: {size}px;
+        height: {size}px;
+        border-radius: 50%;
+        background: {color};
+        display: inline-block;
+        margin-right: 8px;
+        animation: {animation};
+        box-shadow: 0 0 8px {color}40;
+    "></div>
+    <style>
+        @keyframes pulse {{
+            0%, 100% {{ opacity: 1; transform: scale(1); }}
+            50% {{ opacity: 0.7; transform: scale(1.1); }}
+        }}
+    </style>
+    """
+
+def render_micro_animation(element_id: str, animation_type: str = "bounce"):
+    """Add micro-animations to elements."""
+    animations = {
+        'bounce': """
+            @keyframes bounce {
+                0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+                40% { transform: translateY(-10px); }
+                60% { transform: translateY(-5px); }
+            }
+            animation: bounce 0.6s ease-in-out;
+        """,
+        'fadeIn': """
+            @keyframes fadeIn {
+                from { opacity: 0; transform: scale(0.9); }
+                to { opacity: 1; transform: scale(1); }
+            }
+            animation: fadeIn 0.3s ease-out;
+        """,
+        'slideUp': """
+            @keyframes slideUp {
+                from { transform: translateY(20px); opacity: 0; }
+                to { transform: translateY(0); opacity: 1; }
+            }
+            animation: slideUp 0.4s ease-out;
+        """
+    }
+
+    return f"""
+    <style>
+        #{element_id} {{
+            {animations.get(animation_type, animations['fadeIn'])}
+        }}
+    </style>
+    """
+
+# ============================================================================
+# PHASE 3: MOBILE OPTIMIZATION & ADVANCED FEATURES
+# ============================================================================
+
+def detect_mobile_device():
+    """Detect if user is on mobile device using JavaScript."""
+    return """
+    <script>
+        function isMobile() {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+                   window.innerWidth <= 768;
+        }
+        window.isMobileDevice = isMobile();
+    </script>
+    """
+
+def get_mobile_optimized_css():
+    """Mobile-responsive CSS with touch-friendly interactions."""
+    return """
+    /* Mobile Optimization */
+    @media (max-width: 768px) {
+        /* Sidebar adjustments */
+        .css-1d391kg { /* Sidebar container */
+            width: 100% !important;
+            position: relative !important;
+        }
+
+        .css-1lcbmhc { /* Sidebar content */
+            padding: 1rem !important;
+        }
+
+        /* Main content adjustments */
+        .css-18e3th9 { /* Main container */
+            padding: 1rem !important;
+            margin-left: 0 !important;
+        }
+
+        /* Touch-friendly buttons */
+        .stButton > button {
+            min-height: 44px !important;
+            padding: 12px 16px !important;
+            font-size: 16px !important;
+            border-radius: 8px !important;
+        }
+
+        /* Larger touch targets for mobile */
+        .task-card {
+            padding: 16px !important;
+            margin: 8px 0 !important;
+            border-radius: 12px !important;
+        }
+
+        /* Progress rings - smaller on mobile */
+        .progress-ring {
+            width: 50px !important;
+            height: 50px !important;
+        }
+
+        /* Stack columns vertically on mobile */
+        .css-1r6slb0 { /* Columns container */
+            flex-direction: column !important;
+        }
+
+        .css-1cpxqw2 { /* Column */
+            width: 100% !important;
+            margin-bottom: 1rem !important;
+        }
+
+        /* Toast notifications - full width on mobile */
+        .toast-notification {
+            left: 10px !important;
+            right: 10px !important;
+            width: auto !important;
+        }
+
+        /* Navigation tabs - horizontal scroll on mobile */
+        .css-1avcm0n { /* Tab container */
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch !important;
+        }
+
+        /* Form inputs - larger on mobile */
+        .stTextInput > div > div > input,
+        .stNumberInput > div > div > input,
+        .stSelectbox > div > div > select {
+            font-size: 16px !important;
+            padding: 12px !important;
+        }
+
+        /* Metrics - stack vertically */
+        .css-1xarl3l { /* Metric container */
+            flex-direction: column !important;
+            text-align: center !important;
+        }
+    }
+
+    /* Touch-friendly interactions */
+    @media (hover: none) and (pointer: coarse) {
+        /* Remove hover effects on touch devices */
+        .task-card:hover {
+            transform: none !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+        }
+
+        /* Larger tap targets */
+        button, .clickable {
+            min-height: 44px !important;
+            min-width: 44px !important;
+        }
+
+        /* Prevent zoom on input focus */
+        input[type="text"],
+        input[type="number"],
+        select,
+        textarea {
+            font-size: 16px !important;
+        }
+    }
+
+    /* Accessibility improvements */
+    @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+        }
+    }
+
+    /* High contrast mode support */
+    @media (prefers-contrast: high) {
+        .task-card {
+            border: 2px solid currentColor !important;
+        }
+
+        .progress-ring circle {
+            stroke-width: 6px !important;
+        }
+    }
+
+    /* Dark mode optimizations */
+    @media (prefers-color-scheme: dark) {
+        .task-card {
+            background: rgba(30, 30, 30, 0.8) !important;
+            backdrop-filter: blur(10px) !important;
+        }
+    }
+    """
+
+def render_smart_suggestions(task_input: str, existing_tasks: List[Dict[str, Any]]):
+    """Provide smart suggestions based on task input and existing tasks."""
+    suggestions = []
+
+    if not task_input.strip():
+        return suggestions
+
+    input_lower = task_input.lower()
+
+    # Task type suggestions
+    task_types = {
+        "design": ["Create mockups", "Review designs", "Update branding", "Design review"],
+        "development": ["Code review", "Implement feature", "Fix bug", "Deploy to staging"],
+        "payment": ["Send invoice", "Receive payment", "Process refund", "Update budget"],
+        "meeting": ["Client call", "Team standup", "Design review", "Project update"],
+        "content": ["Write copy", "Create assets", "Update website", "Social media"]
+    }
+
+    for category, tasks in task_types.items():
+        if category in input_lower:
+            suggestions.extend(tasks)
+
+    # Existing task patterns
+    for task in existing_tasks[-5:]:  # Last 5 tasks
+        if input_lower in task["task"].lower() or any(word in task["task"].lower() for word in input_lower.split()):
+            similar_tasks = [t["task"] for t in existing_tasks if t != task and task["task"].lower() in t["task"].lower()]
+            suggestions.extend(similar_tasks[:2])  # Max 2 similar tasks
+
+    # Remove duplicates and limit to 5 suggestions
+    seen = set()
+    unique_suggestions = []
+    for suggestion in suggestions:
+        if suggestion.lower() not in seen and len(unique_suggestions) < 5:
+            seen.add(suggestion.lower())
+            unique_suggestions.append(suggestion)
+
+    return unique_suggestions
+
+def render_advanced_notifications():
+    """Advanced notification system with scheduling and smart alerts."""
+    # Initialize notification preferences in session state
+    if 'notification_settings' not in st.session_state:
+        st.session_state.notification_settings = {
+            'task_deadlines': True,
+            'budget_alerts': True,
+            'weekly_updates': True,
+            'milestone_reminders': True,
+            'quiet_hours': {'start': '22:00', 'end': '08:00'}
+        }
+
+    notifications = []
+
+    # Smart deadline notifications
+    current_week = data["project"]["current_week"]
+    week_tasks = [t for t in data["tasks"] if t["week"] == current_week]
+
+    for task in week_tasks:
+        if task["status"] != "completed":
+            days_until_deadline = (datetime.strptime(task["deadline"], "%Y-%m-%d") - datetime.now()).days
+
+            if days_until_deadline == 0:
+                notifications.append({
+                    'type': 'urgent',
+                    'title': 'Task Due Today',
+                    'message': f"'{task['task']}' is due today",
+                    'action': 'complete_task',
+                    'task_id': task['id']
+                })
+            elif days_until_deadline == 1:
+                notifications.append({
+                    'type': 'warning',
+                    'title': 'Task Due Tomorrow',
+                    'message': f"'{task['task']}' is due tomorrow",
+                    'action': 'view_task',
+                    'task_id': task['id']
+                })
+            elif days_until_deadline < 0:
+                notifications.append({
+                    'type': 'overdue',
+                    'title': 'Overdue Task',
+                    'message': f"'{task['task']}' is {abs(days_until_deadline)} days overdue",
+                    'action': 'view_task',
+                    'task_id': task['id']
+                })
+
+    # Budget alerts
+    finances = get_financial_summary(data["finances"])
+    budget_used = ((finances['received'] + finances['paid_out']) / data['finances']['budget_total']) * 100
+
+    if budget_used > 85:
+        notifications.append({
+            'type': 'budget',
+            'title': 'Budget Alert',
+            'message': f"Budget utilization at {budget_used:.1f}%",
+            'action': 'view_finances'
+        })
+
+    # Weekly milestone reminders
+    if current_week < 6:
+        week_progress = len([t for t in week_tasks if t["status"] == "completed"]) / len(week_tasks) if week_tasks else 0
+
+        if week_progress < 0.5:
+            notifications.append({
+                'type': 'milestone',
+                'title': 'Weekly Progress',
+                'message': f"Week {current_week} is {week_progress*100:.0f}% complete",
+                'action': 'view_tasks'
+            })
+
+    return notifications
+
+def render_touch_friendly_button(label: str, key: str, icon: str = "", help_text: str = "", use_container_width: bool = False):
+    """Render a touch-friendly button optimized for mobile."""
+    button_style = f"""
+    <style>
+        .touch-button-{key} {{
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 8px !important;
+            min-height: 44px !important;
+            padding: 12px 16px !important;
+            font-size: 16px !important;
+            font-weight: 500 !important;
+            border-radius: 8px !important;
+            border: none !important;
+            background: linear-gradient(135deg, {COLORS['primary']}, {COLORS['secondary']}) !important;
+            color: white !important;
+            cursor: pointer !important;
+            transition: all 0.2s ease !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+            text-decoration: none !important;
+        }}
+        .touch-button-{key}:hover {{
+            transform: translateY(-1px) !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
+        }}
+        .touch-button-{key}:active {{
+            transform: translateY(0) !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+        }}
+        @media (max-width: 768px) {{
+            .touch-button-{key} {{
+                width: 100% !important;
+                margin: 4px 0 !important;
+            }}
+        }}
+    </style>
+    """
+
+    button_html = f"""
+    {button_style}
+    <button class="touch-button-{key}" title="{help_text}">
+        {icon} {label}
+    </button>
+    """
+
+    return button_html
+
+def optimize_performance():
+    """Performance optimizations for better mobile experience."""
+    # Lazy loading for heavy components
+    # Caching expensive calculations
+    # Debounced input handling
+
+    # Cache expensive calculations
+    if 'cached_financial_summary' not in st.session_state:
+        st.session_state.cached_financial_summary = None
+        st.session_state.last_financial_update = None
+
+    current_time = datetime.now()
+    if (st.session_state.last_financial_update is None or
+        (current_time - st.session_state.last_financial_update).seconds > 30):  # Cache for 30 seconds
+        st.session_state.cached_financial_summary = get_financial_summary(data["finances"])
+        st.session_state.last_financial_update = current_time
+
+    return st.session_state.cached_financial_summary
+
+def editable_metric(label: str, value: float, key: str, prefix: str = "R", suffix: str = "", help_text: str = ""):
+    """Create an editable metric with click-to-edit functionality."""
+    col1, col2 = st.columns([3, 1])
+
+    with col1:
+        if st.button(f"{prefix}{value:,.0f}{suffix}", key=f"edit_{key}", help=help_text or f"Click to edit {label.lower()}"):
+            st.session_state.edit_mode = key
+
+        if st.session_state.edit_mode == key:
+            with st.form(key=f"form_{key}"):
+                new_value = st.number_input(
+                    f"Edit {label}",
+                    value=float(value),
+                    min_value=0.0,
+                    step=100.0,
+                    format="%.0f"
+                )
+
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.form_submit_button("💾 Save"):
+                        return new_value
+                with col2:
+                    if st.form_submit_button("❌ Cancel"):
+                        st.session_state.edit_mode = None
+                        st.rerun()
+
+    return None
+
+def trigger_financial_chain_reaction(data: Dict[str, Any], change_type: str, amount: float):
+    """Trigger all chain reactions when financial amounts change."""
+    finances = data["finances"]
+
+    # Recalculate all financial summaries
+    new_summary = get_financial_summary(finances)
+
+    # Check for budget alerts
+    budget_used = (new_summary['received'] + new_summary['paid_out']) / finances['budget_total'] * 100
+    if budget_used > 90:
+        show_toast("⚠️ Budget utilization over 90%!", "warning")
+    elif budget_used > 100:
+        show_toast("🚨 Budget exceeded!", "error")
+
+    # Check profit margins
+    if new_summary['profit'] < 0:
+        show_toast("📉 Negative profit margin detected", "error")
+    elif new_summary['profit'] > finances['budget_total'] * 0.3:  # 30% profit margin
+        show_toast("💰 Excellent profit margin!", "success")
+
+    # Update task dependencies based on payments
+    update_task_dependencies_from_finances(data)
+
+    return new_summary
+
+def update_task_dependencies_from_finances(data: Dict[str, Any]):
+    """Update task statuses based on financial changes."""
+    finances = data["finances"]
+
+    # Mark payment tasks as complete when payments are received/made
+    for task in data["tasks"]:
+        if "payment" in task["task"].lower() or "pay" in task["task"].lower():
+            task_complete = False
+
+            if "deposit" in task["task"].lower():
+                total_deposits = sum(p["amount"] for p in finances["paid_out"] if "deposit" in p.get("to", "").lower())
+                if total_deposits >= 10000:  # Assuming R10k total deposits
+                    task_complete = True
+
+            if "milestone" in task["task"].lower():
+                total_milestones = sum(p["amount"] for p in finances["paid_out"] if "milestone" in p.get("to", "").lower())
+                if total_milestones >= 15000:  # Assuming R15k milestone payments
+                    task_complete = True
+
+            if task_complete and task["status"] != "completed":
+                task["status"] = "completed"
+                show_toast(f"✅ Task completed: {task['task'][:30]}...", "success")
+
 st.set_page_config(
     page_title="Point Jewels | Project Manager",
     page_icon="💎",
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# Mobile device detection
+st.markdown(detect_mobile_device(), unsafe_allow_html=True)
 
 DATA_FILE = Path(__file__).parent / "project_data.json"
 
@@ -171,15 +755,36 @@ def get_custom_css():
             padding: 16px;
             margin: 8px 0;
             border-left: 4px solid {COLORS['gold']};
+            animation: slideInFade 0.6s ease-out forwards;
+            opacity: 0;
+            transform: translateX(-20px);
         }}
         
-        .timeline-week.current {{ border-left-color: {COLORS['success']}; box-shadow: 0 0 20px rgba(74, 222, 128, 0.2); }}
+        .timeline-week.current {{
+            border-left-color: {COLORS['success']};
+            box-shadow: 0 0 20px rgba(74, 222, 128, 0.2);
+            animation: slideInFade 0.6s ease-out forwards, pulseGlow 3s infinite;
+        }}
+        
+        @keyframes slideInFade {{
+            to {{
+                opacity: 1;
+                transform: translateX(0);
+            }}
+        }}
+        
+        @keyframes pulseGlow {{
+            0%, 100% {{ box-shadow: 0 0 20px rgba(74, 222, 128, 0.2); }}
+            50% {{ box-shadow: 0 0 30px rgba(74, 222, 128, 0.4); }}
+        }}
         .finance-positive {{ color: {COLORS['success']}; }}
         .finance-negative {{ color: {COLORS['danger']}; }}
         
         .streamlit-expanderHeader {{ background: rgba(212, 175, 55, 0.1); border-radius: 8px; }}
         
         hr {{ border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.3), transparent); margin: 24px 0; }}
+
+        {get_mobile_optimized_css()}
     </style>
     """
 
@@ -308,21 +913,64 @@ def get_priority_badge(priority: str) -> str:
     return badges.get(priority, "")
 
 def render_task_card(task: Dict[str, Any]) -> None:
-    """Render a single task card (DRY - used everywhere)."""
+    """Render a single task card with enhanced visual feedback and accessibility (DRY - used everywhere)."""
     status_icon = ICONS["completed"] if task["status"] == "completed" else ICONS["pending"]
     is_overdue = is_task_overdue(task)
     card_class = "task-complete" if task["status"] == "completed" else ("task-overdue" if is_overdue else "task-pending")
     priority_badge = get_priority_badge(task["priority"])
-    
+
+    # Status indicator for the card
+    status_indicator = render_status_indicator(
+        "completed" if task["status"] == "completed" else "overdue" if is_overdue else "pending"
+    )
+
+    # Priority color coding
+    priority_colors = {
+        "critical": "#dc2626",
+        "high": "#ea580c",
+        "medium": "#ca8a04",
+        "low": "#16a34a"
+    }
+    priority_color = priority_colors.get(task["priority"], "#6b7280")
+
+    # Accessibility attributes
+    aria_label = f"Task: {task['task']}. Status: {task['status']}. Priority: {task['priority']}. Due: {task['deadline']}. Assigned to: {task['assignee']}"
+    if is_overdue:
+        aria_label += ". This task is overdue."
+
     st.markdown(f"""
-    <div class="task-card {card_class}">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-size: 16px; color: white;">{status_icon} {task['task']}</span>
+    <div class="task-card {card_class}" style="
+        border-left: 4px solid {priority_color};
+        position: relative;
+        overflow: hidden;
+    "
+    role="article"
+    aria-label="{aria_label}"
+    tabindex="0">
+        <div style="
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            opacity: 0.7;
+        ">
+            {status_indicator}
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; padding-right: 30px;">
+            <span style="font-size: 16px; color: white; font-weight: 500;">{status_icon} {task['task']}</span>
             {priority_badge}
         </div>
         <div style="margin-top: 8px; color: {COLORS['text_dark']}; font-size: 13px;">
-            📅 Due: {task['deadline']} | 👤 {task['assignee']}
+            📅 Due: {task['deadline']} | 👤 {task['assignee']} | Week {task['week']}
         </div>
+        <div style="
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            background: linear-gradient(90deg, {priority_color} 0%, transparent 100%);
+            width: {80 if task['status'] == 'completed' else 40}%;
+            transition: width 0.3s ease;
+        "></div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -395,20 +1043,76 @@ if page == f"{ICONS['dashboard']} Dashboard":
             st.rerun()
     
     st.markdown("---")
-    
-    # Key Metrics (Strategic empathy: show what matters to them)
-    finances = get_financial_summary(data["finances"])
-    
-    col1, col2, col3, col4 = st.columns(4)
+
+    # Enhanced Key Metrics with Progress Rings (Apple-inspired visual design)
+    finances = optimize_performance()  # Use cached financial summary for better performance
+
+    # Progress Overview with Rings
+    col1, col2, col3 = st.columns([1, 2, 1])
+
     with col1:
-        st.metric("Project Progress", f"{progress:.0f}%", f"{stats['completed']} of {stats['total']}")
+        st.markdown("### 📊 Progress")
+        # Project completion ring
+        progress_ring = render_progress_ring(progress, 80, "#10b981", "Complete")
+        st.markdown(progress_ring, unsafe_allow_html=True)
+        st.caption(f"{stats['completed']}/{stats['total']} tasks done")
+
     with col2:
-        st.metric("Money In", f"R{finances['received']:,}", f"of R{data['finances']['budget_total']:,}")
+        st.markdown("### 💰 Financial Health")
+        col_a, col_b, col_c = st.columns(3)
+
+        with col_a:
+            # Budget utilization ring
+            budget_used = ((finances['received'] + finances['paid_out']) / data['finances']['budget_total']) * 100
+            budget_ring = render_progress_ring(budget_used, 60, "#f59e0b", "Budget")
+            st.markdown(budget_ring, unsafe_allow_html=True)
+
+        with col_b:
+            # Profit margin ring
+            profit_margin = (finances['profit'] / data['finances']['budget_total']) * 100 if data['finances']['budget_total'] > 0 else 0
+            profit_color = "#10b981" if profit_margin > 20 else "#ef4444" if profit_margin < 0 else "#f59e0b"
+            profit_ring = render_progress_ring(abs(profit_margin), 60, profit_color, "Profit")
+            st.markdown(profit_ring, unsafe_allow_html=True)
+
+        with col_c:
+            # Cash flow ring
+            cash_flow = (finances['received'] / (finances['paid_out'] + 1)) * 100  # Avoid division by zero
+            cash_color = "#10b981" if cash_flow > 100 else "#ef4444"
+            cash_ring = render_progress_ring(min(cash_flow, 100), 60, cash_color, "Cash Flow")
+            st.markdown(cash_ring, unsafe_allow_html=True)
+
     with col3:
-        st.metric("Money Out", f"R{finances['paid_out']:,}", "to team")
+        st.markdown("### 🎯 Status")
+        # Status indicators
+        status_items = [
+            ("Project", "active" if data["project"]["status"] == "In Progress" else "completed"),
+            ("Week", "active" if data["project"]["current_week"] <= 3 else "completed"),
+            ("Budget", "completed" if budget_used < 90 else "warning" if budget_used < 100 else "overdue"),
+            ("Tasks", "completed" if progress > 80 else "pending")
+        ]
+
+        for label, status in status_items:
+            indicator = render_status_indicator(status)
+            st.markdown(f"{indicator} **{label}**", unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # Financial Summary Cards (enhanced)
+    st.markdown("### 💎 Financial Overview")
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        st.metric("💰 Total Budget", f"R{data['finances']['budget_total']:,}")
+    with col2:
+        received_pct = (finances['received'] / data['finances']['budget_total']) * 100
+        st.metric("📥 Money In", f"R{finances['received']:,}", f"{received_pct:.1f}% of budget")
+    with col3:
+        paid_pct = (finances['paid_out'] / data['finances']['budget_total']) * 100
+        st.metric("📤 Money Out", f"R{finances['paid_out']:,}", f"{paid_pct:.1f}% spent")
     with col4:
-        st.metric("Your Balance", f"R{finances['balance']:,}", "available")
-    
+        profit_color = "🟢" if finances['profit'] > 0 else "🔴"
+        st.metric(f"{profit_color} Your Profit", f"R{finances['profit']:,}", "net earnings")
+
     st.markdown("---")
     
     # This week priorities (Strategic: show what matters NOW)
@@ -429,6 +1133,8 @@ if page == f"{ICONS['dashboard']} Dashboard":
     
     with col2:
         st.markdown("### 📈 Timeline Progress")
+
+        # Overall project progress ring
         weeks: List[WeekInfo] = [
             {"week": 1, "name": "Kickoff", "status": "current" if current_week == 1 else ("complete" if current_week > 1 else "upcoming")},
             {"week": 2, "name": "Shoot & Mockups", "status": "current" if current_week == 2 else ("complete" if current_week > 2 else "upcoming")},
@@ -437,13 +1143,46 @@ if page == f"{ICONS['dashboard']} Dashboard":
             {"week": 5, "name": "Polish", "status": "current" if current_week == 5 else ("complete" if current_week > 5 else "upcoming")},
             {"week": 6, "name": "LAUNCH 🚀", "status": "current" if current_week == 6 else ("complete" if current_week > 6 else "upcoming")},
         ]
-        
-        for w in weeks:
+
+        # Timeline progress visualization
+        completed_weeks = sum(1 for w in weeks if w["status"] == "complete")
+        timeline_progress = (completed_weeks / len(weeks)) * 100
+
+        col_a, col_b = st.columns([1, 2])
+        with col_a:
+            timeline_ring = render_progress_ring(timeline_progress, 70, "#8b5cf6", "Timeline")
+            st.markdown(timeline_ring, unsafe_allow_html=True)
+
+        with col_b:
+            st.markdown(f"**Week {current_week} of 6**")
+            current_week_name = next((w["name"] for w in weeks if w["status"] == "current"), "Planning")
+            st.markdown(f"*{current_week_name}*")
+
+        st.markdown("---")
+
+        # Enhanced timeline with status indicators
+        for i, w in enumerate(weeks):
             icon = ICONS["week_complete"] if w["status"] == "complete" else (ICONS["week_current"] if w["status"] == "current" else ICONS["week_upcoming"])
             highlight = "current" if w["status"] == "current" else ""
+
+            # Status indicator for each week
+            week_status = "completed" if w["status"] == "complete" else "active" if w["status"] == "current" else "pending"
+            status_dot = render_status_indicator(week_status, 8)
+
+            # Animation delay for cascade effect
+            animation_delay = f"animation-delay: {i * 0.1}s;"
+
             st.markdown(f"""
-            <div class="timeline-week {highlight}">
-                {icon} <strong>W{w['week']}</strong>: {w['name']}
+            <div class="timeline-week {highlight}" style="
+                {animation_delay}
+                border-left: 3px solid {'#10b981' if w['status'] == 'complete' else '#8b5cf6' if w['status'] == 'current' else '#6b7280'};
+                transition: all 0.3s ease;
+            ">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    {status_dot}
+                    <span>{icon}</span>
+                    <strong>W{w['week']}</strong>: {w['name']}
+                </div>
             </div>
             """, unsafe_allow_html=True)
     
@@ -513,54 +1252,151 @@ elif page == f"{ICONS['tasks']} Tasks":
         filtered = [t for t in filtered if t["priority"] == filter_priority.lower()]
     
     # Display tasks with checkbox (pragmatic: inline editing)
-    for task in filtered:
-        col1, col2, col3 = st.columns([0.4, 4, 0.8])
-        
+    for i, task in enumerate(filtered):
+        col1, col2, col3, col4 = st.columns([0.3, 0.3, 4, 0.8])
+
         with col1:
+            # Drag up button
+            if i > 0 and st.button("⬆️", key=f"up_{task['id']}", help="Move task up"):
+                # Find task in original list and swap with previous
+                task_idx = data["tasks"].index(task)
+                if task_idx > 0:
+                    data["tasks"][task_idx], data["tasks"][task_idx - 1] = data["tasks"][task_idx - 1], data["tasks"][task_idx]
+                    save_data(data)
+                    show_toast("✅ Task moved up", "success")
+                    st.rerun()
+
+        with col2:
+            # Drag down button
+            if i < len(filtered) - 1 and st.button("⬇️", key=f"down_{task['id']}", help="Move task down"):
+                # Find task in original list and swap with next
+                task_idx = data["tasks"].index(task)
+                if task_idx < len(data["tasks"]) - 1:
+                    data["tasks"][task_idx], data["tasks"][task_idx + 1] = data["tasks"][task_idx + 1], data["tasks"][task_idx]
+                    save_data(data)
+                    show_toast("✅ Task moved down", "success")
+                    st.rerun()
+
+        with col3:
             is_complete = task["status"] == "completed"
             if st.checkbox("", value=is_complete, key=f"task_{task['id']}"):
-                task["status"] = "completed"
+                if task["status"] != "completed":
+                    task["status"] = "completed"
+                    show_toast(f"✅ Task completed: {task['task'][:30]}...", "success")
             else:
-                task["status"] = "pending"
-        
-        with col2:
+                if task["status"] != "pending":
+                    task["status"] = "pending"
+                    show_toast(f"🔄 Task reopened: {task['task'][:30]}...", "info")
+
+        with col4:
             style = "text-decoration: line-through; color: #666;" if task["status"] == "completed" else ""
             if is_task_overdue(task):
                 style = f"color: {COLORS['danger']};"
-            
+
             st.markdown(f"""
             <div style="{style}">
                 <strong>{task['task']}</strong>
                 <br><small style="color: {COLORS['text_dark']};">Week {task['week']} | Due: {task['deadline']} | {task['assignee']}</small>
             </div>
             """, unsafe_allow_html=True)
-        
-        with col3:
-            priority_icons = {"critical": "🔴", "high": "🟠", "medium": "🟡", "low": "🟢"}
-            st.markdown(priority_icons.get(task["priority"], "⚪"))
+
+        # Priority indicator (moved to end)
+        priority_icons = {"critical": "🔴", "high": "🟠", "medium": "🟡", "low": "🟢"}
+        st.markdown(f"**Priority:** {priority_icons.get(task['priority'], '⚪')} {task['priority'].title()}")
+
+        st.markdown("---")
     
     st.markdown("---")
-    
-    # Add task (pragmatic: simple form)
-    with st.expander("➕ Add New Task"):
-        new_task = st.text_input("Task", placeholder="What needs to be done?")
+
+    # Advanced Notifications
+    notifications = render_advanced_notifications()
+    if notifications:
+        with st.expander(f"🔔 Smart Notifications ({len(notifications)})", expanded=True):
+            for notification in notifications:
+                col1, col2, col3 = st.columns([0.1, 4, 1])
+
+                # Notification icon
+                with col1:
+                    icon_map = {
+                        'urgent': '🚨',
+                        'warning': '⚠️',
+                        'overdue': '⏰',
+                        'budget': '💰',
+                        'milestone': '🎯'
+                    }
+                    st.markdown(icon_map.get(notification['type'], '📢'))
+
+                # Notification content
+                with col2:
+                    st.markdown(f"**{notification['title']}**")
+                    st.markdown(notification['message'])
+
+                # Action button
+                with col3:
+                    if notification['type'] in ['urgent', 'warning', 'overdue']:
+                        if st.button("View", key=f"view_{notification.get('task_id', notification['type'])}"):
+                            # Scroll to task or change page
+                            if 'task_id' in notification:
+                                st.session_state.scroll_to_task = notification['task_id']
+                            st.rerun()
+
+    st.markdown("---")
+
+    # Enhanced Add Task with Smart Suggestions
+    with st.expander("➕ Add New Task", expanded=False):
+        # Task input with smart suggestions
+        task_input = st.text_input(
+            "Task Description",
+            placeholder="Start typing to see smart suggestions...",
+            key="task_input"
+        )
+
+        # Show smart suggestions
+        if task_input.strip():
+            suggestions = render_smart_suggestions(task_input, data["tasks"])
+            if suggestions:
+                st.markdown("**💡 Smart Suggestions:**")
+                suggestion_cols = st.columns(min(len(suggestions), 3))
+
+                for i, suggestion in enumerate(suggestions):
+                    with suggestion_cols[i % 3]:
+                        if st.button(
+                            suggestion,
+                            key=f"suggestion_{i}",
+                            help="Click to use this suggestion",
+                            use_container_width=True
+                        ):
+                            st.session_state.task_input = suggestion
+                            st.rerun()
+
         col1, col2, col3, col4 = st.columns(4)
-        
+
         with col1:
-            new_week = st.number_input("Week", 1, 6, 1)
+            new_week = st.number_input("Week", 1, 6, data["project"]["current_week"])
         with col2:
-            new_deadline = st.date_input("Due")
+            # Smart deadline suggestion based on week
+            default_deadline = datetime.now() + timedelta(days=(new_week - data["project"]["current_week"]) * 7)
+            new_deadline = st.date_input("Due Date", default_deadline.date())
         with col3:
             new_priority = st.selectbox("Priority", ["critical", "high", "medium", "low"], index=1)
         with col4:
             new_assignee = st.selectbox("Assignee", ["You", "Jared", "Liza", "Everyone"])
-        
-        if st.button("Add Task"):
-            if new_task.strip():
+
+        # Touch-friendly add button
+        add_button_html = render_touch_friendly_button(
+            "Add Task",
+            "add_task",
+            "➕",
+            "Add the new task to your project"
+        )
+
+        if st.button("Add Task", key="add_task_btn"):
+            task_text = st.session_state.get('task_input', task_input)
+            if task_text.strip():
                 new_id = max(t["id"] for t in data["tasks"]) + 1
                 data["tasks"].append({
                     "id": new_id,
-                    "task": new_task,
+                    "task": task_text,
                     "week": new_week,
                     "deadline": str(new_deadline),
                     "status": "pending",
@@ -568,7 +1404,9 @@ elif page == f"{ICONS['tasks']} Tasks":
                     "priority": new_priority
                 })
                 save_data(data)
-                st.success("✅ Task added!")
+                show_toast(f"✅ Task added: {task_text[:30]}...", "success")
+                # Clear input
+                st.session_state.task_input = ""
                 st.rerun()
             else:
                 st.error("Task description required")
@@ -582,13 +1420,25 @@ elif page == f"{ICONS['finances']} Finances":
     # Summary (Strategic: show the key numbers)
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.metric("Total Budget", f"R{data['finances']['budget_total']:,}")
+        # Editable budget total
+        new_budget = editable_metric("Total Budget", data['finances']['budget_total'], "budget_total", "R")
+        if new_budget is not None:
+            data['finances']['budget_total'] = new_budget
+            save_data(data)
+            trigger_financial_chain_reaction(data, "budget_change", new_budget)
+            st.rerun()
+        else:
+            st.metric("Total Budget", f"R{data['finances']['budget_total']:,}")
+    
     with col2:
         st.metric("Received", f"R{finances['received']:,}", f"+R{finances['pending_in']:,} pending")
     with col3:
         st.metric("Paid Out", f"R{finances['paid_out']:,}", f"+R{finances['pending_out']:,} pending")
     with col4:
         st.metric("Your Profit", f"R{finances['profit']:,}")
+    
+    # Render toast notifications
+    render_toast()
     
     st.markdown("---")
     
@@ -615,6 +1465,29 @@ elif page == f"{ICONS['finances']} Finances":
     
     # Budget breakdown
     st.markdown("### 📊 Budget Allocation")
+    
+    # Editable budget components
+    col1, col2 = st.columns(2)
+    with col1:
+        new_designer = editable_metric("Designer Total", data['finances']['designer_total'], "designer_total", "R")
+        if new_designer is not None:
+            data['finances']['designer_total'] = new_designer
+            save_data(data)
+            trigger_financial_chain_reaction(data, "designer_change", new_designer)
+            st.rerun()
+        else:
+            st.metric("Designer Total", f"R{data['finances']['designer_total']:,}")
+    
+    with col2:
+        new_expenses = editable_metric("Misc Expenses", data['finances']['expenses_misc'], "expenses_misc", "R")
+        if new_expenses is not None:
+            data['finances']['expenses_misc'] = new_expenses
+            save_data(data)
+            trigger_financial_chain_reaction(data, "expenses_change", new_expenses)
+            st.rerun()
+        else:
+            st.metric("Misc Expenses", f"R{data['finances']['expenses_misc']:,}")
+    
     fig: Any = go.Figure(data=[go.Pie(
         labels=['Designer (Jared)', 'Misc Expenses', 'Your Profit'],
         values=[data['finances']['designer_total'], data['finances']['expenses_misc'], finances['profit']],
