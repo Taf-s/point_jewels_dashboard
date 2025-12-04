@@ -3,6 +3,15 @@ Point Jewels Project Manager Dashboard
 A modern, modular Streamlit dashboard using component-based architecture.
 """
 
+import sys
+import os
+
+# Add the current directory to the system path
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+# Now try your import
+from styles.main import get_custom_css
+
 import streamlit as st
 from datetime import datetime
 
