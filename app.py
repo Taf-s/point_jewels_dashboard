@@ -7,10 +7,25 @@ A pragmatic Streamlit dashboard using principles from:
 
 import streamlit as st
 import json
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 import plotly.graph_objects as go
-from typing import Dict, List, Any
+from typing import Dict, List, Any, TypedDict
+
+# ============================================================================
+# TYPE DEFINITIONS
+# ============================================================================
+
+class WeekInfo(TypedDict):
+    week: int
+    name: str
+    status: str
+
+class TimelineWeek(TypedDict):
+    week: int
+    title: str
+    dates: str
+    milestones: List[str]
 
 # ============================================================================
 # CONFIGURATION & SETUP
@@ -221,7 +236,7 @@ def get_default_data() -> Dict[str, Any]:
 # UTILITY FUNCTIONS (Reusable components)
 # ============================================================================
 
-def get_task_stats(tasks: List[Dict]) -> Dict[str, int]:
+def get_task_stats(tasks: List[Dict[str, Any]]) -> Dict[str, int]:
     """Calculate task statistics."""
     return {
         "total": len(tasks),
@@ -230,7 +245,7 @@ def get_task_stats(tasks: List[Dict]) -> Dict[str, int]:
         "critical": len([t for t in tasks if t["priority"] == "critical"]),
     }
 
-def get_financial_summary(finances: Dict) -> Dict[str, int]:
+def get_financial_summary(finances: Dict[str, Any]) -> Dict[str, int]:
     """Calculate financial overview."""
     return {
         "received": sum(r["amount"] for r in finances["received"]),
@@ -241,7 +256,7 @@ def get_financial_summary(finances: Dict) -> Dict[str, int]:
         "balance": sum(r["amount"] for r in finances["received"]) - sum(p["amount"] for p in finances["paid_out"]),
     }
 
-def is_task_overdue(task: Dict) -> bool:
+def is_task_overdue(task: Dict[str, Any]) -> bool:
     """Check if task is past deadline and not complete."""
     if task["status"] == "completed":
         return False
@@ -258,7 +273,7 @@ def get_priority_badge(priority: str) -> str:
     }
     return badges.get(priority, "")
 
-def render_task_card(task: Dict) -> None:
+def render_task_card(task: Dict[str, Any]) -> None:
     """Render a single task card (DRY - used everywhere)."""
     status_icon = "✅" if task["status"] == "completed" else "⏳"
     is_overdue = is_task_overdue(task)
@@ -277,7 +292,7 @@ def render_task_card(task: Dict) -> None:
     </div>
     """, unsafe_allow_html=True)
 
-def render_payment_card(payment: Dict, direction: str = "in") -> None:
+def render_payment_card(payment: Dict[str, Any], direction: str = "in") -> None:
     """Render payment card (money in/out)."""
     status = payment["status"]
     is_pending = status == "pending"
@@ -293,7 +308,7 @@ def render_payment_card(payment: Dict, direction: str = "in") -> None:
     </div>
     """, unsafe_allow_html=True)
 
-def get_days_remaining(project: Dict) -> int:
+def get_days_remaining(project: Dict[str, Any]) -> int:
     """Calculate days until launch."""
     launch_date = datetime.strptime(project["launch_date"], "%Y-%m-%d")
     return (launch_date - datetime.now()).days
@@ -380,7 +395,7 @@ if page == "🏠 Dashboard":
     
     with col2:
         st.markdown("### 📈 Timeline Progress")
-        weeks = [
+        weeks: List[WeekInfo] = [
             {"week": 1, "name": "Kickoff", "status": "current" if current_week == 1 else ("complete" if current_week > 1 else "upcoming")},
             {"week": 2, "name": "Shoot & Mockups", "status": "current" if current_week == 2 else ("complete" if current_week > 2 else "upcoming")},
             {"week": 3, "name": "Dev", "status": "current" if current_week == 3 else ("complete" if current_week > 3 else "upcoming")},
@@ -566,7 +581,7 @@ elif page == "💰 Finances":
     
     # Budget breakdown
     st.markdown("### 📊 Budget Allocation")
-    fig = go.Figure(data=[go.Pie(
+    fig: Any = go.Figure(data=[go.Pie(
         labels=['Designer (Jared)', 'Misc Expenses', 'Your Profit'],
         values=[data['finances']['designer_total'], data['finances']['expenses_misc'], finances['profit']],
         hole=.6,
@@ -587,7 +602,7 @@ elif page == "📅 Timeline":
     
     current_week = data["project"]["current_week"]
     
-    weeks_timeline = [
+    weeks_timeline: List[TimelineWeek] = [
         {"week": 1, "title": "Kickoff & Activation", "dates": "Dec 2-8", "milestones": ["Designer activated", "Deposits paid", "Brand meeting", "Scope locked"]},
         {"week": 2, "title": "Photoshoot & Mockups", "dates": "Dec 9-15", "milestones": ["Photoshoot done", "Mockups ready", "Terry reviews", "Feedback in"]},
         {"week": 3, "title": "Development", "dates": "Dec 16-22", "milestones": ["Dev starts", "Product uploads", "Charts integrated", "Frontend built"]},
@@ -597,8 +612,8 @@ elif page == "📅 Timeline":
     ]
     
     for w in weeks_timeline:
-        is_current = w["week"] == current_week
-        is_complete = w["week"] < current_week
+        is_current: bool = w["week"] == current_week
+        is_complete: bool = w["week"] < current_week
         icon = "🟢" if is_complete else ("🔵" if is_current else "⚪")
         
         with st.expander(f"{icon} Week {w['week']}: {w['title']} ({w['dates']})", expanded=is_current):

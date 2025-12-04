@@ -26,6 +26,35 @@ A beautiful Streamlit-powered project management dashboard for your website deve
 - **Simple & Direct**: Minimal UI, maximum clarity—no unnecessary clicks
 - **Type hints**: Better code maintainability with Python typing
 - **Single responsibility**: Each function does one thing well
+- **Test-Driven**: Comprehensive unit tests ensure reliability
+
+## Testing
+
+The dashboard includes comprehensive unit tests to ensure robustness:
+
+```bash
+# Run all tests
+pytest
+
+# Run with verbose output
+pytest -v
+
+# Run specific test file
+pytest test_dashboard.py
+
+# Run specific test class
+pytest test_dashboard.py::TestTaskStats
+```
+
+**Test Coverage:**
+
+- ✅ Task statistics calculations
+- ✅ Financial summary computations
+- ✅ Task overdue detection
+- ✅ Days remaining calculations
+- ✅ Data persistence (JSON load/save)
+- ✅ Data structure validation
+- ✅ Integration tests
 
 ## Quick Start
 
