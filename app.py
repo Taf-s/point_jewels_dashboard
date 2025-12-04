@@ -56,9 +56,6 @@ st.markdown(get_custom_css(), unsafe_allow_html=True)
 # Load data
 data = load_data()
 
-# Load data
-data = load_data()
-
 # ============================================================================
 # SIDEBAR NAVIGATION
 # ============================================================================
