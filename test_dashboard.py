@@ -279,7 +279,7 @@ class TestIntegration:
         assert isinstance(days_remaining, int)
 
         # Test that overdue tasks are counted correctly
-        overdue_count = sum(1 for task in sample_tasks if is_task_overdue(task))
+        overdue_count: int = sum(1 for task in sample_tasks if is_task_overdue(task))
         assert overdue_count >= 0  # Should not be negative
 
 if __name__ == "__main__":

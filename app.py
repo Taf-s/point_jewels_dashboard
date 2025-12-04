@@ -9,8 +9,22 @@ import streamlit as st
 import json
 from datetime import datetime, timedelta
 from pathlib import Path
-import plotly.graph_objects as go
-from typing import Dict, List, Any, TypedDict
+import plotly.graph_objects as go  # type: ignore
+from typing import Dict, List, Any, TypedDict, Optional
+
+
+def html_escape(s: Any) -> str:
+    """Return an HTML-escaped version of s (s can be any value) to avoid XSS in unsafe HTML blocks."""
+    if s is None:
+        return ""
+    t = str(s)
+    return (
+        t.replace('&', '&amp;')
+         .replace('<', '&lt;')
+         .replace('>', '&gt;')
+         .replace('"', '&quot;')
+         .replace("'", '&#x27;')
+    )
 
 # ============================================================================
 # TYPE DEFINITIONS
@@ -26,6 +40,13 @@ class TimelineWeek(TypedDict):
     title: str
     dates: str
     milestones: List[str]
+
+class Notification(TypedDict, total=False):
+    type: str
+    title: str
+    message: str
+    action: str
+    task_id: Optional[int]
 
 # ============================================================================
 # ICON SYSTEM (Luxury Jewelry Theme)
@@ -119,7 +140,7 @@ def render_toast():
                 border-radius: 50%;
                 animation: spin 1s linear infinite;
             "></div>
-            <span style="font-weight: 500; font-size: 14px;">{st.session_state.toast_message}</span>
+            <span style="font-weight: 500; font-size: 14px;">{html_escape(st.session_state.toast_message)}</span>
         </div>
         <style>
             @keyframes slideInBounce {{
@@ -391,9 +412,9 @@ def get_mobile_optimized_css():
     }
     """
 
-def render_smart_suggestions(task_input: str, existing_tasks: List[Dict[str, Any]]):
+def render_smart_suggestions(task_input: str, existing_tasks: List[Dict[str, Any]]) -> List[str]:
     """Provide smart suggestions based on task input and existing tasks."""
-    suggestions = []
+    suggestions: List[str] = []
 
     if not task_input.strip():
         return suggestions
@@ -420,16 +441,16 @@ def render_smart_suggestions(task_input: str, existing_tasks: List[Dict[str, Any
             suggestions.extend(similar_tasks[:2])  # Max 2 similar tasks
 
     # Remove duplicates and limit to 5 suggestions
-    seen = set()
-    unique_suggestions = []
+    seen: set[str] = set()
+    unique_suggestions: List[str] = []
     for suggestion in suggestions:
-        if suggestion.lower() not in seen and len(unique_suggestions) < 5:
+        if suggestion.lower() not in seen:
             seen.add(suggestion.lower())
             unique_suggestions.append(suggestion)
 
-    return unique_suggestions
+    return unique_suggestions[:5]
 
-def render_advanced_notifications():
+def render_advanced_notifications() -> List[Notification]:
     """Advanced notification system with scheduling and smart alerts."""
     # Initialize notification preferences in session state
     if 'notification_settings' not in st.session_state:
@@ -441,7 +462,7 @@ def render_advanced_notifications():
             'quiet_hours': {'start': '22:00', 'end': '08:00'}
         }
 
-    notifications = []
+    notifications: List[Notification] = []
 
     # Smart deadline notifications
     current_week = data["project"]["current_week"]
@@ -485,19 +506,20 @@ def render_advanced_notifications():
             'type': 'budget',
             'title': 'Budget Alert',
             'message': f"Budget utilization at {budget_used:.1f}%",
-            'action': 'view_finances'
+            'action': 'view_finances',
+            'task_id': None
         })
 
     # Weekly milestone reminders
     if current_week < 6:
         week_progress = len([t for t in week_tasks if t["status"] == "completed"]) / len(week_tasks) if week_tasks else 0
-
         if week_progress < 0.5:
             notifications.append({
                 'type': 'milestone',
                 'title': 'Weekly Progress',
                 'message': f"Week {current_week} is {week_progress*100:.0f}% complete",
-                'action': 'view_tasks'
+                'action': 'view_tasks',
+                'task_id': None
             })
 
     return notifications
@@ -578,20 +600,17 @@ def editable_metric(label: str, value: float, key: str, prefix: str = "R", suffi
     if edit_key not in st.session_state:
         st.session_state[edit_key] = False
 
-    col1, col2 = st.columns([4, 1])
+    # Display current value as a button to enable editing
+    if st.button(f"{prefix}{value:,.0f}{suffix}",
+                key=f"display_{key}",
+                help=help_text or f"Click to edit {label.lower()}",
+                use_container_width=True):
+        st.session_state[edit_key] = True
+        st.rerun()
 
-    with col1:
-        # Display current value as a button to enable editing
-        if st.button(f"{prefix}{value:,.0f}{suffix}",
-                    key=f"display_{key}",
-                    help=help_text or f"Click to edit {label.lower()}",
-                    use_container_width=True):
-            st.session_state[edit_key] = True
-            st.rerun()
-
-        # Show current value as metric when not editing
-        if not st.session_state[edit_key]:
-            st.metric(label, f"{prefix}{value:,.0f}{suffix}")
+    # Show current value as metric when not editing
+    if not st.session_state[edit_key]:
+        st.metric(label, f"{prefix}{value:,.0f}{suffix}")
 
     # Show edit form when in edit mode
     if st.session_state[edit_key]:
@@ -1212,7 +1231,7 @@ def render_task_card(task: Dict[str, Any]) -> None:
     priority_color = priority_colors.get(task["priority"], "#6b7280")
 
     # Accessibility attributes
-    aria_label = f"Task: {task['task']}. Status: {task['status']}. Priority: {task['priority']}. Due: {task['deadline']}. Assigned to: {task['assignee']}"
+    aria_label = f"Task: {html_escape(task['task'])}. Status: {html_escape(task['status'])}. Priority: {html_escape(task['priority'])}. Due: {html_escape(task['deadline'])}. Assigned to: {html_escape(task['assignee'])}"
     if is_overdue:
         aria_label += ". This task is overdue."
 
@@ -1234,11 +1253,11 @@ def render_task_card(task: Dict[str, Any]) -> None:
             {status_indicator}
         </div>
         <div style="display: flex; justify-content: space-between; align-items: center; padding-right: 30px;">
-            <span style="font-size: 16px; color: white; font-weight: 500;">{status_icon} {task['task']}</span>
+            <span style="font-size: 16px; color: white; font-weight: 500;">{status_icon} {html_escape(task['task'])}</span>
             {priority_badge}
         </div>
         <div style="margin-top: 8px; color: {COLORS['text_dark']}; font-size: 13px;">
-            📅 Due: {task['deadline']} | 👤 {task['assignee']} | Week {task['week']}
+            📅 Due: {html_escape(task['deadline'])} | 👤 {html_escape(task['assignee'])} | Week {task['week']}
         </div>
         <div style="
             position: absolute;
@@ -1259,12 +1278,13 @@ def render_payment_card(payment: Dict[str, Any], direction: str = "in") -> None:
     status_icon = ICONS["pending"] if is_pending else ICONS["completed"]
     color = COLORS['warning'] if is_pending else COLORS['success']
     label = payment.get("from") or payment.get("to")
+    label_safe = html_escape(label)
     date_label = "Expected" if is_pending and direction == "in" else "Due" if is_pending else "Date"
     
     st.markdown(f"""
     <div class="task-card {'task-pending' if is_pending else 'task-complete'}">
         <strong style="color: {color};">{status_icon} R{payment['amount']:,}</strong>
-        <br><small style="color: {COLORS['text_dark']};"> {label} | {date_label}: {payment['date']}</small>
+        <br><small style="color: {COLORS['text_dark']};"> {label_safe} | {date_label}: {html_escape(payment['date'])}</small>
     </div>
     """, unsafe_allow_html=True)
 
@@ -1343,8 +1363,8 @@ if page == f"{ICONS['dashboard']} Dashboard":
     ''', unsafe_allow_html=True)
 
     # Financial Health Card
-    budget_used = ((finances['received'] + finances['paid_out']) / data['finances']['budget_total']) * 100
-    profit_margin = (finances['profit'] / data['finances']['budget_total']) * 100 if data['finances']['budget_total'] > 0 else 0
+    budget_used: float = ((finances['received'] + finances['paid_out']) / data['finances']['budget_total']) * 100
+    profit_margin: float = (finances['profit'] / data['finances']['budget_total']) * 100 if data['finances']['budget_total'] > 0 else 0
 
     st.markdown(f'''
     <div class="stat-card fade-in">
@@ -1598,8 +1618,8 @@ elif page == f"{ICONS['tasks']} Tasks":
 
             st.markdown(f"""
             <div style="{style}">
-                <strong>{task['task']}</strong>
-                <br><small style="color: {COLORS['text_dark']};">Week {task['week']} | Due: {task['deadline']} | {task['assignee']}</small>
+                <strong>{html_escape(task['task'])}</strong>
+                <br><small style="color: {COLORS['text_dark']};">Week {task['week']} | Due: {html_escape(task['deadline'])} | {html_escape(task['assignee'])}</small>
             </div>
             """, unsafe_allow_html=True)
 
@@ -1927,10 +1947,10 @@ elif page == f"{ICONS['timeline']} Timeline":
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
                 <div>
                     <div style="font-size: 18px; font-weight: 600; color: {COLORS['gold']}; margin-bottom: 4px;">
-                        {icon} Week {w['week']}: {w['title']}
+                        {icon} Week {w['week']}: {html_escape(w['title'])}
                     </div>
                     <div style="font-size: 14px; color: {COLORS['text_muted']}; margin-bottom: 8px;">
-                        📅 {w['dates']}
+                        📅 {html_escape(w['dates'])}
                     </div>
                 </div>
                 <div style="text-align: right;">
@@ -1945,7 +1965,7 @@ elif page == f"{ICONS['timeline']} Timeline":
         '''
 
         for milestone in w["milestones"]:
-            timeline_html += f'<div style="font-size: 13px; color: {COLORS["text_dark"]};">• {milestone}</div>'
+            timeline_html += f'<div style="font-size: 13px; color: {COLORS["text_dark"]};">• {html_escape(milestone)}</div>'
 
         timeline_html += '</div></div>'
 
