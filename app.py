@@ -17,11 +17,11 @@ from datetime import datetime
 
 # Import our modular components
 from utils.config import COLORS, ICONS
+
 from utils.helpers import (
     load_data, save_data, get_task_stats, get_financial_summary,
     is_task_overdue, get_days_remaining, optimize_performance
 )
-from styles.main import get_custom_css
 from components.ui import render_progress_ring, render_status_indicator, render_card, render_metric
 from components.tasks import render_task_card, render_task_filters, filter_tasks, render_smart_suggestions
 from components.finances import (
