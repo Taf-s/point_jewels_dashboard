@@ -28,8 +28,42 @@ class TimelineWeek(TypedDict):
     milestones: List[str]
 
 # ============================================================================
-# CONFIGURATION & SETUP
+# ICON SYSTEM (Luxury Jewelry Theme)
 # ============================================================================
+
+ICONS = {
+    # Status Icons
+    "completed": "💎",      # Diamond for completed tasks
+    "pending": "⏳",        # Hourglass for pending
+    "overdue": "💔",        # Broken heart for overdue
+    "critical": "🔴",       # Red diamond for critical
+
+    # Timeline Icons
+    "week_complete": "💚",  # Green heart for completed weeks
+    "week_current": "💙",   # Blue heart for current week
+    "week_upcoming": "🤍",  # White heart for upcoming weeks
+
+    # Navigation Icons
+    "dashboard": "🏠",      # Keep house for dashboard
+    "tasks": "📋",          # Clipboard for tasks
+    "finances": "💰",       # Money bag for finances
+    "timeline": "📊",       # Chart for timeline
+    "contacts": "👨‍👩‍👧‍👦", # Family for contacts
+    "communications": "💌", # Letter for communications
+    "settings": "⚙️",       # Keep settings gear
+
+    # Priority Icons
+    "high": "🟡",           # Yellow diamond for high priority
+    "medium": "🔵",         # Blue circle for medium
+    "low": "⚪",             # White circle for low
+
+    # Action Icons
+    "save": "💾",           # Floppy disk for save
+    "refresh": "🔄",        # Refresh symbol
+    "add": "➕",             # Plus for add
+    "copy": "📋",           # Clipboard for copy
+    "launch": "🚀",         # Rocket for launch
+}
 
 st.set_page_config(
     page_title="Point Jewels | Project Manager",
@@ -275,7 +309,7 @@ def get_priority_badge(priority: str) -> str:
 
 def render_task_card(task: Dict[str, Any]) -> None:
     """Render a single task card (DRY - used everywhere)."""
-    status_icon = "✅" if task["status"] == "completed" else "⏳"
+    status_icon = ICONS["completed"] if task["status"] == "completed" else ICONS["pending"]
     is_overdue = is_task_overdue(task)
     card_class = "task-complete" if task["status"] == "completed" else ("task-overdue" if is_overdue else "task-pending")
     priority_badge = get_priority_badge(task["priority"])
@@ -296,7 +330,7 @@ def render_payment_card(payment: Dict[str, Any], direction: str = "in") -> None:
     """Render payment card (money in/out)."""
     status = payment["status"]
     is_pending = status == "pending"
-    status_icon = "⏳" if is_pending else "✅"
+    status_icon = ICONS["pending"] if is_pending else ICONS["completed"]
     color = COLORS['warning'] if is_pending else COLORS['success']
     label = payment.get("from") or payment.get("to")
     date_label = "Expected" if is_pending and direction == "in" else "Due" if is_pending else "Date"
@@ -319,19 +353,17 @@ def get_days_remaining(project: Dict[str, Any]) -> int:
 
 data = load_data()
 
-# Sidebar navigation
+    # Sidebar navigation
 with st.sidebar:
     st.markdown("# 💎 Point Jewels")
     st.markdown("### Project Manager")
     st.markdown("---")
-    
+
     page = st.radio(
         "Navigate",
-        ["🏠 Dashboard", "✅ Tasks", "💰 Finances", "📅 Timeline", "👥 Contacts", "📝 Communications", "⚙️ Settings"],
+        [f"{ICONS['dashboard']} Dashboard", f"{ICONS['tasks']} Tasks", f"{ICONS['finances']} Finances", f"{ICONS['timeline']} Timeline", f"{ICONS['contacts']} Contacts", f"{ICONS['communications']} Communications", f"{ICONS['settings']} Settings"],
         label_visibility="collapsed"
-    )
-    
-    st.markdown("---")
+    )    st.markdown("---")
     st.markdown("### 📊 Quick Stats")
     
     stats = get_task_stats(data["tasks"])
@@ -350,13 +382,13 @@ with st.sidebar:
 # PAGES
 # ============================================================================
 
-if page == "🏠 Dashboard":
+if page == f"{ICONS['dashboard']} Dashboard":
     col1, col2 = st.columns([3, 1])
     with col1:
-        st.markdown("# 🏠 Project Dashboard")
+        st.markdown(f"# {ICONS['dashboard']} Project Dashboard")
         st.markdown(f"**{data['project']['name']}** | Week {data['project']['current_week']} of 6")
     with col2:
-        if st.button("🔄 Refresh"):
+        if st.button(f"{ICONS['refresh']} Refresh"):
             data = load_data()
             st.rerun()
     
@@ -405,7 +437,7 @@ if page == "🏠 Dashboard":
         ]
         
         for w in weeks:
-            icon = "🟢" if w["status"] == "complete" else ("🔵" if w["status"] == "current" else "⚪")
+            icon = ICONS["week_complete"] if w["status"] == "complete" else (ICONS["week_current"] if w["status"] == "current" else ICONS["week_upcoming"])
             highlight = "current" if w["status"] == "current" else ""
             st.markdown(f"""
             <div class="timeline-week {highlight}">
@@ -430,7 +462,7 @@ if page == "🏠 Dashboard":
     with col3:
         if st.button("💾 Save All Data", use_container_width=True):
             save_data(data)
-            st.success("✅ Saved!")
+            st.success(f"{ICONS['save']} Saved!")
     
     # Generated message display (Strategic empathy: pre-written to reduce friction)
     if st.session_state.get("action") == "daughters_update":
@@ -449,12 +481,12 @@ if page == "🏠 Dashboard":
 Timeline is locked in. Your dad's going to love this 👍"""
             
             st.text_area("Ready to send:", message, height=200, disabled=True)
-            if st.button("✅ Copy & Clear", key="copy_daughters"):
+            if st.button(f"{ICONS['copy']} Copy & Clear", key="copy_daughters"):
                 st.session_state.action = None
                 st.rerun()
 
-elif page == "✅ Tasks":
-    st.markdown("# ✅ Task Management")
+elif page == f"{ICONS['tasks']} Tasks":
+    st.markdown(f"# {ICONS['tasks']} Task Management")
     st.markdown("---")
     
     # Pragmatic filters (show what matters: status, priority, week)
@@ -539,8 +571,8 @@ elif page == "✅ Tasks":
             else:
                 st.error("Task description required")
 
-elif page == "💰 Finances":
-    st.markdown("# 💰 Financial Overview")
+elif page == f"{ICONS['finances']} Finances":
+    st.markdown(f"# {ICONS['finances']} Financial Overview")
     st.markdown("---")
     
     finances = get_financial_summary(data["finances"])
@@ -596,8 +628,8 @@ elif page == "💰 Finances":
     )
     st.plotly_chart(fig, use_container_width=True)
 
-elif page == "📅 Timeline":
-    st.markdown("# 📅 6-Week Timeline")
+elif page == f"{ICONS['timeline']} Timeline":
+    st.markdown(f"# {ICONS['timeline']} 6-Week Timeline")
     st.markdown("---")
     
     current_week = data["project"]["current_week"]
@@ -614,7 +646,7 @@ elif page == "📅 Timeline":
     for w in weeks_timeline:
         is_current: bool = w["week"] == current_week
         is_complete: bool = w["week"] < current_week
-        icon = "🟢" if is_complete else ("🔵" if is_current else "⚪")
+        icon = ICONS["week_complete"] if is_complete else (ICONS["week_current"] if is_current else ICONS["week_upcoming"])
         
         with st.expander(f"{icon} Week {w['week']}: {w['title']} ({w['dates']})", expanded=is_current):
             col1, col2 = st.columns([2, 1])
@@ -628,11 +660,11 @@ elif page == "📅 Timeline":
                 week_tasks = [t for t in data["tasks"] if t["week"] == w["week"]]
                 st.markdown("**Tasks:**")
                 for t in week_tasks:
-                    icon_task = "✅" if t["status"] == "completed" else "⏳"
+                    icon_task = ICONS["completed"] if t["status"] == "completed" else ICONS["pending"]
                     st.markdown(f"{icon_task} {t['task'][:30]}...")
 
-elif page == "👥 Contacts":
-    st.markdown("# 👥 Key Contacts & Communication")
+elif page == f"{ICONS['contacts']} Contacts":
+    st.markdown(f"# {ICONS['contacts']} Key Contacts & Communication")
     st.markdown("---")
     
     contacts_info = [
@@ -681,8 +713,8 @@ elif page == "👥 Contacts":
             </div>
             """, unsafe_allow_html=True)
 
-elif page == "📝 Communications":
-    st.markdown("# 📝 Message Templates")
+elif page == f"{ICONS['communications']} Communications":
+    st.markdown(f"# {ICONS['communications']} Message Templates")
     st.markdown("---")
     
     tab1, tab2, tab3 = st.tabs(["📱 Daughters", "🎨 Jared", "💝 Liza"])
@@ -737,8 +769,8 @@ Quick update: Everything on track this week. Designer working on [X], you'll see
 Focus on the business—I've got the website. Big milestone coming [date] ❤️"""
             st.text_area("Copy this:", liza_msg2, height=150, disabled=True, key="liza2")
 
-elif page == "⚙️ Settings":
-    st.markdown("# ⚙️ Settings & Data")
+elif page == f"{ICONS['settings']} Settings":
+    st.markdown(f"# {ICONS['settings']} Settings & Data")
     st.markdown("---")
     
     col1, col2 = st.columns(2)
@@ -762,7 +794,7 @@ elif page == "⚙️ Settings":
         st.markdown("### Data Management")
         if st.button("💾 Save All Data"):
             save_data(data)
-            st.success("✅ Saved!")
+            st.success(f"{ICONS['save']} Saved!")
         
         if st.button("🔄 Reset to Fresh Data"):
             if st.checkbox("Confirm reset"):
