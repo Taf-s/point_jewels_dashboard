@@ -363,7 +363,9 @@ with st.sidebar:
         "Navigate",
         [f"{ICONS['dashboard']} Dashboard", f"{ICONS['tasks']} Tasks", f"{ICONS['finances']} Finances", f"{ICONS['timeline']} Timeline", f"{ICONS['contacts']} Contacts", f"{ICONS['communications']} Communications", f"{ICONS['settings']} Settings"],
         label_visibility="collapsed"
-    )    st.markdown("---")
+    )
+    
+    st.markdown("---")
     st.markdown("### 📊 Quick Stats")
     
     stats = get_task_stats(data["tasks"])
