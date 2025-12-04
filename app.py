@@ -1847,10 +1847,6 @@ elif page == f"{ICONS['finances']} Finances":
         )
     )
     st.plotly_chart(fig, use_container_width=True)
-        showlegend=True,
-        legend=dict(orientation="h", yanchor="bottom", y=-0.2)
-    )
-    st.plotly_chart(fig, use_container_width=True)
 
 elif page == f"{ICONS['timeline']} Timeline":
     st.markdown(f"# {ICONS['timeline']} 6-Week Project Timeline")
