@@ -28,6 +28,26 @@ def get_custom_css() -> str:
                 padding: 20px;
                 margin: 8px 0;
             }
+            .stat-value {
+                font-size: 24px;
+                font-weight: 700;
+                color: #d4af37;
+                margin-bottom: 4px;
+            }
+            .stat-label {
+                font-size: 12px;
+                color: #a0a0a0;
+                font-weight: 500;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+            .fade-in {
+                animation: fadeIn 0.6s ease-in-out;
+            }
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(20px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
         </style>
         """
         return css_template

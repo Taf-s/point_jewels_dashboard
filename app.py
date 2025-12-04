@@ -67,7 +67,7 @@ with st.sidebar:
 
     page = st.radio(
         "Navigate",
-        [f"{ICONS['dashboard']} Dashboard", f"{ICONS['tasks']} Tasks", f"{ICONS['finances']} Finances", f"{ICONS['timeline']} Timeline", f"{ICONS['contacts']} Contacts", f"{ICONS['communications']} Communications", f"{ICONS['settings']} Settings"],
+        [f"{ICONS['dashboard']} Dashboard", f"{ICONS['tasks']} Tasks", f"{ICONS['finances']} Finances", f"{ICONS['timeline']} Timeline", f"{ICONS['contacts']} Contacts", f"{ICONS['communications']} Communications", f"{ICONS['studio']} Studio", f"{ICONS['settings']} Settings"],
         label_visibility="collapsed"
     )
 
@@ -118,15 +118,15 @@ def render_dashboard_page():
 
     # Project Progress Card
     st.markdown(f'''
-    <div class="stat-card fade-in">
-        <div style="margin-bottom: 16px;">
-            <div style="font-size: 18px; color: {COLORS['gold']}; margin-bottom: 8px;">📊 Project Progress</div>
+    <div style="background-color: #1f1f1f; border: 1px solid #d4af37; border-radius: 16px; padding: 20px; margin: 8px 0;">
+        <div style="font-size: 18px; color: #d4af37; margin-bottom: 8px;">📊 Project Progress</div>
+        <div style="text-align: center; margin-bottom: 12px;">
+            <div style="width: 80px; height: 80px; border-radius: 50%; background-color: #10b981; display: inline-flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
+                {int(progress)}%
+            </div>
         </div>
-        <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 12px;">
-            {render_progress_ring(progress, 100, COLORS['success'], "")}
-        </div>
-        <div class="stat-value">{stats['completed']}/{stats['total']}</div>
-        <div class="stat-label">Tasks Completed</div>
+        <div style="font-size: 24px; font-weight: 700; color: #d4af37; margin-bottom: 4px;">{stats['completed']}/{stats['total']}</div>
+        <div style="font-size: 12px; color: #a0a0a0; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">Tasks Completed</div>
     </div>
     ''', unsafe_allow_html=True)
 
@@ -135,20 +135,24 @@ def render_dashboard_page():
     profit_margin = (finances['profit'] / data['finances']['budget_total']) * 100 if data['finances']['budget_total'] > 0 else 0
 
     st.markdown(f'''
-    <div class="stat-card fade-in">
-        <div style="font-size: 18px; color: {COLORS['gold']}; margin-bottom: 8px;">💰 Financial Health</div>
+    <div style="background-color: #1f1f1f; border: 1px solid #d4af37; border-radius: 16px; padding: 20px; margin: 8px 0;">
+        <div style="font-size: 18px; color: #d4af37; margin-bottom: 8px;">💰 Financial Health</div>
         <div style="display: flex; justify-content: space-around; align-items: center; margin-bottom: 12px;">
             <div style="text-align: center;">
-                {render_progress_ring(budget_used, 80, COLORS['warning'], "")}
-                <div style="font-size: 12px; color: {COLORS['text_muted']}; margin-top: 4px;">Budget</div>
+                <div style="width: 60px; height: 60px; border-radius: 50%; background-color: #f59e0b; display: inline-flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
+                    {int(budget_used)}%
+                </div>
+                <div style="font-size: 12px; color: #a0a0a0; margin-top: 4px;">Budget</div>
             </div>
             <div style="text-align: center;">
-                {render_progress_ring(abs(profit_margin), 80, COLORS['success'] if profit_margin > 20 else COLORS['danger'] if profit_margin < 0 else COLORS['warning'], "")}
-                <div style="font-size: 12px; color: {COLORS['text_muted']}; margin-top: 4px;">Profit</div>
+                <div style="width: 60px; height: 60px; border-radius: 50%; background-color: {'#10b981' if profit_margin > 20 else '#ef4444' if profit_margin < 0 else '#f59e0b'}; display: inline-flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
+                    {int(abs(profit_margin))}%
+                </div>
+                <div style="font-size: 12px; color: #a0a0a0; margin-top: 4px;">Profit</div>
             </div>
         </div>
-        <div class="stat-value">R{finances['profit']:,}</div>
-        <div class="stat-label">Total Profit</div>
+        <div style="font-size: 24px; font-weight: 700; color: #d4af37; margin-bottom: 4px;">R{finances['profit']:,}</div>
+        <div style="font-size: 12px; color: #a0a0a0; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">Total Profit</div>
     </div>
     ''', unsafe_allow_html=True)
 
@@ -454,6 +458,9 @@ elif page == f"{ICONS['contacts']} Contacts":
 elif page == f"{ICONS['communications']} Communications":
     st.markdown(f"# {ICONS['communications']} Communication Templates")
     st.markdown("Communications page - Coming soon!")
+elif page == f"{ICONS['studio']} Studio":
+    st.markdown(f"# {ICONS['studio']} Design Studio")
+    st.markdown("Studio page - Coming soon!")
 elif page == f"{ICONS['settings']} Settings":
     st.markdown(f"# {ICONS['settings']} Settings")
     st.markdown("Settings page - Coming soon!")

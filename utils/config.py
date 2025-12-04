@@ -58,6 +58,7 @@ ICONS = {
     "timeline": "📊",       # Chart for timeline
     "contacts": "👨‍👩‍👧‍👦", # Family for contacts
     "communications": "💌", # Letter for communications
+    "studio": "🎨",         # Paintbrush for design studio
     "settings": "⚙️",       # Keep settings gear
 
     # Priority Icons

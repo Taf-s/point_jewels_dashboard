@@ -109,7 +109,7 @@ def generate_notifications(data: Dict[str, Any]) -> List[Dict[str, Any]]:
 
     # Check budget warnings
     finances = data["finances"]
-    budget_used = ((finances.get('received', []) + finances.get('paid_out', [])) / finances.get('budget_total', 1)) * 100
+    budget_used = ((sum(finances.get('received', [])) + sum(finances.get('paid_out', []))) / finances.get('budget_total', 1)) * 100
     if budget_used > 90:
         notifications.append({
             'type': 'budget',
