@@ -571,30 +571,61 @@ def optimize_performance():
 
 def editable_metric(label: str, value: float, key: str, prefix: str = "R", suffix: str = "", help_text: str = ""):
     """Create an editable metric with click-to-edit functionality."""
-    col1, col2 = st.columns([3, 1])
+    edit_key = f"edit_{key}"
+    form_key = f"form_{key}"
+
+    # Initialize session state if needed
+    if edit_key not in st.session_state:
+        st.session_state[edit_key] = False
+
+    col1, col2 = st.columns([4, 1])
 
     with col1:
-        if st.button(f"{prefix}{value:,.0f}{suffix}", key=f"edit_{key}", help=help_text or f"Click to edit {label.lower()}"):
-            st.session_state.edit_mode = key
+        # Display current value as a button to enable editing
+        if st.button(f"{prefix}{value:,.0f}{suffix}",
+                    key=f"display_{key}",
+                    help=help_text or f"Click to edit {label.lower()}",
+                    use_container_width=True):
+            st.session_state[edit_key] = True
+            st.rerun()
 
-        if st.session_state.edit_mode == key:
-            with st.form(key=f"form_{key}"):
-                new_value = st.number_input(
-                    f"Edit {label}",
-                    value=float(value),
-                    min_value=0.0,
-                    step=100.0,
-                    format="%.0f"
-                )
+        # Show current value as metric when not editing
+        if not st.session_state[edit_key]:
+            st.metric(label, f"{prefix}{value:,.0f}{suffix}")
 
-                col1, col2 = st.columns(2)
-                with col1:
-                    if st.form_submit_button("💾 Save"):
-                        return new_value
-                with col2:
-                    if st.form_submit_button("❌ Cancel"):
-                        st.session_state.edit_mode = None
-                        st.rerun()
+    # Show edit form when in edit mode
+    if st.session_state[edit_key]:
+        with st.container():
+            st.markdown(f"### ✏️ Edit {label}")
+
+            with st.form(key=form_key):
+                col_a, col_b, col_c = st.columns([2, 1, 1])
+
+                with col_a:
+                    new_value = st.number_input(
+                        f"New {label}",
+                        value=float(value),
+                        min_value=0.0,
+                        step=1000.0,
+                        format="%.0f",
+                        help=f"Enter new value for {label.lower()}"
+                    )
+
+                with col_b:
+                    save_clicked = st.form_submit_button("💾 Save", use_container_width=True)
+
+                with col_c:
+                    cancel_clicked = st.form_submit_button("❌ Cancel", use_container_width=True)
+
+            if save_clicked:
+                st.session_state[edit_key] = False
+                st.success(f"✅ {label} updated successfully!")
+                return new_value
+
+            if cancel_clicked:
+                st.session_state[edit_key] = False
+                st.info("Changes cancelled")
+                st.rerun()
 
     return None
 
@@ -685,69 +716,309 @@ FONTS = {
 def get_custom_css():
     return f"""
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Source+Sans+Pro:wght@300;400;600&display=swap');
-        
-        .stApp {{ background: linear-gradient(135deg, {COLORS['dark_bg']} 0%, {COLORS['dark_accent']} 50%, {COLORS['darker']} 100%); }}
-        
-        h1, h2, h3 {{ font-family: {FONTS['header']} !important; color: {COLORS['gold']} !important; }}
-        p, li, span, div {{ font-family: {FONTS['body']}; }}
-        
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap');
+
+        /* Base styling */
+        .stApp {{
+            background: linear-gradient(135deg, {COLORS['dark_bg']} 0%, {COLORS['dark_accent']} 50%, {COLORS['darker']} 100%);
+            font-family: 'Inter', sans-serif;
+        }}
+
+        /* Typography */
+        h1, h2, h3 {{
+            font-family: 'Playfair Display', serif !important;
+            color: {COLORS['gold']} !important;
+            font-weight: 600 !important;
+        }}
+
+        p, li, span, div {{
+            font-family: 'Inter', sans-serif;
+        }}
+
+        /* Metrics styling */
         [data-testid="metric-container"] {{
             background: linear-gradient(145deg, {COLORS['card_light']} 0%, {COLORS['dark_bg']} 100%);
             border: 1px solid rgba(212, 175, 55, 0.3);
-            border-radius: 12px;
-            padding: 16px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
         }}
-        
-        [data-testid="stMetricValue"] {{ color: {COLORS['gold']} !important; font-family: {FONTS['header']} !important; }}
-        [data-testid="stMetricLabel"] {{ color: {COLORS['text_muted']} !important; }}
-        
+
+        [data-testid="metric-container"]:hover {{
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(212, 175, 55, 0.2);
+        }}
+
+        [data-testid="stMetricValue"] {{
+            color: {COLORS['gold']} !important;
+            font-family: 'Playfair Display', serif !important;
+            font-size: 28px !important;
+            font-weight: 700 !important;
+        }}
+
+        [data-testid="stMetricLabel"] {{
+            color: {COLORS['text_muted']} !important;
+            font-size: 14px !important;
+            font-weight: 500 !important;
+        }}
+
+        /* Sidebar styling */
         [data-testid="stSidebar"] {{
             background: linear-gradient(180deg, {COLORS['dark_bg']} 0%, {COLORS['darker']} 100%);
-            border-right: 1px solid rgba(212, 175, 55, 0.2);
+            border-right: 2px solid rgba(212, 175, 55, 0.2);
+            box-shadow: 2px 0 20px rgba(0,0,0,0.3);
         }}
-        
+
+        /* Button styling */
         .stButton > button {{
             background: linear-gradient(145deg, {COLORS['gold']} 0%, #b8962e 100%);
             color: {COLORS['dark_bg']};
             border: none;
-            border-radius: 8px;
+            border-radius: 12px;
             font-weight: 600;
-            font-family: {FONTS['body']};
+            font-family: 'Inter', sans-serif;
+            padding: 12px 24px;
             transition: all 0.3s ease;
+            box-shadow: 0 4px 16px rgba(212, 175, 55, 0.3);
         }}
-        
-        .stButton > button:hover {{ transform: translateY(-2px); box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4); }}
-        
-        .stProgress > div > div {{ background: linear-gradient(90deg, {COLORS['gold']} 0%, #f4d03f 100%); }}
-        
+
+        .stButton > button:hover {{
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(212, 175, 55, 0.4);
+        }}
+
+        .stButton > button:active {{
+            transform: translateY(0);
+        }}
+
+        /* Progress bars */
+        .stProgress > div > div {{
+            background: linear-gradient(90deg, {COLORS['gold']} 0%, #f4d03f 100%);
+            border-radius: 8px;
+            height: 8px !important;
+        }}
+
+        .stProgress > div {{
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+            height: 8px !important;
+        }}
+
+        /* Card styling */
         .task-card {{
             background: linear-gradient(145deg, {COLORS['card_light']} 0%, {COLORS['dark_bg']} 100%);
             border: 1px solid rgba(212, 175, 55, 0.2);
-            border-radius: 12px;
-            padding: 20px;
-            margin: 10px 0;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 12px 0;
             transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
         }}
-        
-        .task-card:hover {{ border-color: rgba(212, 175, 55, 0.5); box-shadow: 0 8px 30px rgba(212, 175, 55, 0.1); }}
+
+        .task-card:hover {{
+            border-color: rgba(212, 175, 55, 0.5);
+            box-shadow: 0 12px 32px rgba(212, 175, 55, 0.15);
+            transform: translateY(-2px);
+        }}
+
         .task-complete {{ border-left: 4px solid {COLORS['success']}; }}
         .task-pending {{ border-left: 4px solid {COLORS['warning']}; }}
         .task-overdue {{ border-left: 4px solid {COLORS['danger']}; }}
-        
+
+        /* Badge styling */
         .badge {{
             display: inline-block;
-            padding: 4px 12px;
+            padding: 6px 16px;
             border-radius: 20px;
             font-size: 12px;
             font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }}
-        
-        .badge-success {{ background: rgba(74, 222, 128, 0.2); color: {COLORS['success']}; }}
-        .badge-warning {{ background: rgba(251, 191, 36, 0.2); color: {COLORS['warning']}; }}
-        .badge-danger {{ background: rgba(239, 68, 68, 0.2); color: {COLORS['danger']}; }}
-        .badge-info {{ background: rgba(96, 165, 250, 0.2); color: {COLORS['info']}; }}
+
+        .badge-success {{
+            background: rgba(74, 222, 128, 0.2);
+            color: {COLORS['success']};
+            border: 1px solid rgba(74, 222, 128, 0.3);
+        }}
+
+        .badge-warning {{
+            background: rgba(251, 191, 36, 0.2);
+            color: {COLORS['warning']};
+            border: 1px solid rgba(251, 191, 36, 0.3);
+        }}
+
+        .badge-danger {{
+            background: rgba(239, 68, 68, 0.2);
+            color: {COLORS['danger']};
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }}
+
+        .badge-info {{
+            background: rgba(96, 165, 250, 0.2);
+            color: {COLORS['info']};
+            border: 1px solid rgba(96, 165, 250, 0.3);
+        }}
+
+        /* Progress ring styling */
+        .progress-ring {{
+            display: inline-block;
+            margin: 10px;
+        }}
+
+        .progress-ring circle {{
+            transition: stroke-dasharray 0.3s ease;
+        }}
+
+        /* Stats grid styling */
+        .stats-grid {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }}
+
+        .stat-card {{
+            background: linear-gradient(145deg, {COLORS['card_light']} 0%, {COLORS['dark_bg']} 100%);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        }}
+
+        .stat-card:hover {{
+            transform: translateY(-4px);
+            box-shadow: 0 12px 32px rgba(212, 175, 55, 0.15);
+        }}
+
+        .stat-value {{
+            font-size: 36px;
+            font-weight: 700;
+            color: {COLORS['gold']};
+            font-family: 'Playfair Display', serif;
+            margin-bottom: 8px;
+        }}
+
+        .stat-label {{
+            font-size: 14px;
+            color: {COLORS['text_muted']};
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }}
+
+        /* Financial overview styling */
+        .financial-overview {{
+            background: linear-gradient(145deg, {COLORS['card_light']} 0%, {COLORS['dark_bg']} 100%);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            border-radius: 20px;
+            padding: 32px;
+            margin: 24px 0;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }}
+
+        .financial-grid {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 24px;
+            margin-top: 24px;
+        }}
+
+        .financial-card {{
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid rgba(212, 175, 55, 0.1);
+        }}
+
+        .financial-card.income {{
+            border-left: 4px solid {COLORS['success']};
+        }}
+
+        .financial-card.expense {{
+            border-left: 4px solid {COLORS['danger']};
+        }}
+
+        /* Timeline styling */
+        .timeline-container {{
+            position: relative;
+            padding-left: 40px;
+        }}
+
+        .timeline-item {{
+            position: relative;
+            margin-bottom: 32px;
+            padding-left: 24px;
+        }}
+
+        .timeline-item::before {{
+            content: '';
+            position: absolute;
+            left: -20px;
+            top: 8px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: {COLORS['gold']};
+            border: 3px solid {COLORS['dark_bg']};
+        }}
+
+        .timeline-item.completed::before {{
+            background: {COLORS['success']};
+        }}
+
+        .timeline-item.pending::before {{
+            background: {COLORS['warning']};
+        }}
+
+        .timeline-line {{
+            position: absolute;
+            left: -17px;
+            top: 20px;
+            bottom: -20px;
+            width: 2px;
+            background: linear-gradient(to bottom, {COLORS['gold']}, rgba(212, 175, 55, 0.3));
+        }}
+
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {{
+            .stats-grid {{
+                grid-template-columns: 1fr;
+            }}
+
+            .financial-grid {{
+                grid-template-columns: 1fr;
+            }}
+
+            .stat-card, .financial-card {{
+                padding: 16px;
+            }}
+
+            .progress-ring {{
+                margin: 5px;
+            }}
+        }}
+
+        /* Animation keyframes */
+        @keyframes pulse {{
+            0%, 100% {{ opacity: 1; }}
+            50% {{ opacity: 0.5; }}
+        }}
+
+        @keyframes fadeIn {{
+            from {{ opacity: 0; transform: translateY(20px); }}
+            to {{ opacity: 1; transform: translateY(0); }}
+        }}
+
+        .fade-in {{
+            animation: fadeIn 0.5s ease-out;
+        }}
+    </style>
+    """
         
         .timeline-week {{
             background: linear-gradient(145deg, {COLORS['card_light']} 0%, {COLORS['dark_bg']} 100%);
@@ -1047,53 +1318,78 @@ if page == f"{ICONS['dashboard']} Dashboard":
     # Enhanced Key Metrics with Progress Rings (Apple-inspired visual design)
     finances = optimize_performance()  # Use cached financial summary for better performance
 
-    # Progress Overview with Rings
-    col1, col2, col3 = st.columns([1, 2, 1])
+    # Progress Overview with Rings in organized cards
+    st.markdown('<div class="stats-grid">', unsafe_allow_html=True)
 
-    with col1:
-        st.markdown("### 📊 Progress")
-        # Project completion ring
-        progress_ring = render_progress_ring(progress, 80, "#10b981", "Complete")
-        st.markdown(progress_ring, unsafe_allow_html=True)
-        st.caption(f"{stats['completed']}/{stats['total']} tasks done")
+    # Project Progress Card
+    st.markdown(f'''
+    <div class="stat-card fade-in">
+        <div style="margin-bottom: 16px;">
+            <div style="font-size: 18px; color: {COLORS['gold']}; margin-bottom: 8px;">📊 Project Progress</div>
+        </div>
+        <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 12px;">
+            {render_progress_ring(progress, 100, "#10b981", "")}
+        </div>
+        <div class="stat-value">{stats['completed']}/{stats['total']}</div>
+        <div class="stat-label">Tasks Completed</div>
+    </div>
+    ''', unsafe_allow_html=True)
 
-    with col2:
-        st.markdown("### 💰 Financial Health")
-        col_a, col_b, col_c = st.columns(3)
+    # Financial Health Card
+    budget_used = ((finances['received'] + finances['paid_out']) / data['finances']['budget_total']) * 100
+    profit_margin = (finances['profit'] / data['finances']['budget_total']) * 100 if data['finances']['budget_total'] > 0 else 0
 
-        with col_a:
-            # Budget utilization ring
-            budget_used = ((finances['received'] + finances['paid_out']) / data['finances']['budget_total']) * 100
-            budget_ring = render_progress_ring(budget_used, 60, "#f59e0b", "Budget")
-            st.markdown(budget_ring, unsafe_allow_html=True)
+    st.markdown(f'''
+    <div class="stat-card fade-in">
+        <div style="font-size: 18px; color: {COLORS['gold']}; margin-bottom: 8px;">💰 Financial Health</div>
+        <div style="display: flex; justify-content: space-around; align-items: center; margin-bottom: 12px;">
+            <div style="text-align: center;">
+                {render_progress_ring(budget_used, 70, "#f59e0b", "")}
+                <div style="font-size: 12px; color: {COLORS['text_muted']}; margin-top: 4px;">Budget</div>
+            </div>
+            <div style="text-align: center;">
+                {render_progress_ring(abs(profit_margin), 70, "#10b981" if profit_margin > 20 else "#ef4444" if profit_margin < 0 else "#f59e0b", "")}
+                <div style="font-size: 12px; color: {COLORS['text_muted']}; margin-top: 4px;">Profit</div>
+            </div>
+        </div>
+        <div class="stat-value">R{finances['profit']:,}</div>
+        <div class="stat-label">Total Profit</div>
+    </div>
+    ''', unsafe_allow_html=True)
 
-        with col_b:
-            # Profit margin ring
-            profit_margin = (finances['profit'] / data['finances']['budget_total']) * 100 if data['finances']['budget_total'] > 0 else 0
-            profit_color = "#10b981" if profit_margin > 20 else "#ef4444" if profit_margin < 0 else "#f59e0b"
-            profit_ring = render_progress_ring(abs(profit_margin), 60, profit_color, "Profit")
-            st.markdown(profit_ring, unsafe_allow_html=True)
+    # Status Overview Card
+    status_items = [
+        ("Project", "active" if data["project"]["status"] == "In Progress" else "completed"),
+        ("Week", "active" if data["project"]["current_week"] <= 3 else "completed"),
+        ("Budget", "completed" if budget_used < 90 else "warning" if budget_used < 100 else "overdue"),
+        ("Tasks", "completed" if progress > 80 else "pending")
+    ]
 
-        with col_c:
-            # Cash flow ring
-            cash_flow = (finances['received'] / (finances['paid_out'] + 1)) * 100  # Avoid division by zero
-            cash_color = "#10b981" if cash_flow > 100 else "#ef4444"
-            cash_ring = render_progress_ring(min(cash_flow, 100), 60, cash_color, "Cash Flow")
-            st.markdown(cash_ring, unsafe_allow_html=True)
+    status_html = ""
+    for label, status in status_items:
+        indicator = render_status_indicator(status, 8)
+        status_color = {
+            'completed': COLORS['success'],
+            'pending': COLORS['warning'],
+            'overdue': COLORS['danger'],
+            'active': COLORS['info']
+        }.get(status, COLORS['text_muted'])
+        status_html += f'<div style="display: flex; align-items: center; margin: 6px 0;">{indicator}<span style="color: {status_color}; font-size: 14px;">{label}</span></div>'
 
-    with col3:
-        st.markdown("### 🎯 Status")
-        # Status indicators
-        status_items = [
-            ("Project", "active" if data["project"]["status"] == "In Progress" else "completed"),
-            ("Week", "active" if data["project"]["current_week"] <= 3 else "completed"),
-            ("Budget", "completed" if budget_used < 90 else "warning" if budget_used < 100 else "overdue"),
-            ("Tasks", "completed" if progress > 80 else "pending")
-        ]
+    st.markdown(f'''
+    <div class="stat-card fade-in">
+        <div style="font-size: 18px; color: {COLORS['gold']}; margin-bottom: 16px;">🎯 Project Status</div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+            {status_html}
+        </div>
+        <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(212, 175, 55, 0.2);">
+            <div class="stat-value">{data["project"]["current_week"]}</div>
+            <div class="stat-label">Current Week</div>
+        </div>
+    </div>
+    ''', unsafe_allow_html=True)
 
-        for label, status in status_items:
-            indicator = render_status_indicator(status)
-            st.markdown(f"{indicator} **{label}**", unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)  # Close stats-grid
 
     st.markdown("---")
 
@@ -1414,60 +1710,70 @@ elif page == f"{ICONS['tasks']} Tasks":
 elif page == f"{ICONS['finances']} Finances":
     st.markdown(f"# {ICONS['finances']} Financial Overview")
     st.markdown("---")
-    
+
     finances = get_financial_summary(data["finances"])
-    
-    # Summary (Strategic: show the key numbers)
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        # Editable budget total
-        new_budget = editable_metric("Total Budget", data['finances']['budget_total'], "budget_total", "R")
-        if new_budget is not None:
-            data['finances']['budget_total'] = new_budget
-            save_data(data)
-            trigger_financial_chain_reaction(data, "budget_change", new_budget)
-            st.rerun()
-        else:
-            st.metric("Total Budget", f"R{data['finances']['budget_total']:,}")
-    
-    with col2:
-        st.metric("Received", f"R{finances['received']:,}", f"+R{finances['pending_in']:,} pending")
-    with col3:
-        st.metric("Paid Out", f"R{finances['paid_out']:,}", f"+R{finances['pending_out']:,} pending")
-    with col4:
-        st.metric("Your Profit", f"R{finances['profit']:,}")
-    
-    # Render toast notifications
-    render_toast()
-    
-    st.markdown("---")
-    
-    # Cash flow (Pragmatic: side-by-side comparison)
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.markdown("### 📥 Money In")
-        for payment in data["finances"]["received"]:
-            render_payment_card(payment, "in")
-        st.markdown("**Pending Income:**")
-        for payment in data["finances"]["pending_in"]:
-            render_payment_card(payment, "in")
-    
-    with col2:
-        st.markdown("### 📤 Money Out")
-        for payment in data["finances"]["paid_out"]:
-            render_payment_card(payment, "out")
-        st.markdown("**Pending Payments:**")
-        for payment in data["finances"]["pending_out"]:
-            render_payment_card(payment, "out")
-    
-    st.markdown("---")
-    
-    # Budget breakdown
-    st.markdown("### 📊 Budget Allocation")
-    
+
+    # Enhanced Financial Summary with better organization
+    st.markdown('<div class="financial-overview">', unsafe_allow_html=True)
+    st.markdown("## 💰 Financial Summary")
+
+    # Editable budget metrics in organized cards
+    st.markdown('<div class="financial-grid">', unsafe_allow_html=True)
+
+    # Budget Total Card
+    new_budget = editable_metric("Total Budget", data['finances']['budget_total'], "budget_total", "R")
+    if new_budget is not None:
+        data['finances']['budget_total'] = new_budget
+        save_data(data)
+        trigger_financial_chain_reaction(data, "budget_change", new_budget)
+        st.rerun()
+
+    st.markdown(f'''
+    <div class="financial-card">
+        <div style="font-size: 24px; color: {COLORS['gold']}; margin-bottom: 8px;">💼</div>
+        <div style="font-size: 28px; font-weight: 700; color: {COLORS['gold']}; margin-bottom: 4px;">R{data['finances']['budget_total']:,}</div>
+        <div style="font-size: 14px; color: {COLORS['text_muted']}; font-weight: 500;">TOTAL BUDGET</div>
+        <div style="font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 8px;">Click to edit</div>
+    </div>
+    ''', unsafe_allow_html=True)
+
+    # Income Card
+    st.markdown(f'''
+    <div class="financial-card income">
+        <div style="font-size: 24px; color: {COLORS['success']}; margin-bottom: 8px;">📈</div>
+        <div style="font-size: 28px; font-weight: 700; color: {COLORS['success']}; margin-bottom: 4px;">R{finances['received']:,}</div>
+        <div style="font-size: 14px; color: {COLORS['text_muted']}; font-weight: 500;">TOTAL RECEIVED</div>
+        <div style="font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 8px;">+R{finances['pending_in']:,} pending</div>
+    </div>
+    ''', unsafe_allow_html=True)
+
+    # Expenses Card
+    st.markdown(f'''
+    <div class="financial-card expense">
+        <div style="font-size: 24px; color: {COLORS['danger']}; margin-bottom: 8px;">📉</div>
+        <div style="font-size: 28px; font-weight: 700; color: {COLORS['danger']}; margin-bottom: 4px;">R{finances['paid_out']:,}</div>
+        <div style="font-size: 14px; color: {COLORS['text_muted']}; font-weight: 500;">TOTAL PAID</div>
+        <div style="font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 8px;">+R{finances['pending_out']:,} pending</div>
+    </div>
+    ''', unsafe_allow_html=True)
+
+    # Profit Card
+    profit_color = COLORS['success'] if finances['profit'] > 0 else COLORS['danger']
+    st.markdown(f'''
+    <div class="financial-card">
+        <div style="font-size: 24px; color: {profit_color}; margin-bottom: 8px;">💰</div>
+        <div style="font-size: 28px; font-weight: 700; color: {profit_color}; margin-bottom: 4px;">R{finances['profit']:,}</div>
+        <div style="font-size: 14px; color: {COLORS['text_muted']}; font-weight: 500;">PROJECT PROFIT</div>
+        <div style="font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 8px;">Balance: R{finances['balance']:,}</div>
+    </div>
+    ''', unsafe_allow_html=True)
+
+    st.markdown('</div>', unsafe_allow_html=True)  # Close financial-grid
+
     # Editable budget components
+    st.markdown("## 📊 Budget Allocation")
     col1, col2 = st.columns(2)
+
     with col1:
         new_designer = editable_metric("Designer Total", data['finances']['designer_total'], "designer_total", "R")
         if new_designer is not None:
@@ -1475,9 +1781,7 @@ elif page == f"{ICONS['finances']} Finances":
             save_data(data)
             trigger_financial_chain_reaction(data, "designer_change", new_designer)
             st.rerun()
-        else:
-            st.metric("Designer Total", f"R{data['finances']['designer_total']:,}")
-    
+
     with col2:
         new_expenses = editable_metric("Misc Expenses", data['finances']['expenses_misc'], "expenses_misc", "R")
         if new_expenses is not None:
@@ -1485,10 +1789,38 @@ elif page == f"{ICONS['finances']} Finances":
             save_data(data)
             trigger_financial_chain_reaction(data, "expenses_change", new_expenses)
             st.rerun()
-        else:
-            st.metric("Misc Expenses", f"R{data['finances']['expenses_misc']:,}")
-    
-    fig: Any = go.Figure(data=[go.Pie(
+
+    st.markdown('</div>', unsafe_allow_html=True)  # Close financial-overview
+
+    # Render toast notifications
+    render_toast()
+
+    st.markdown("---")
+
+    # Cash flow visualization
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown("### 📥 Money In")
+        for payment in data["finances"]["received"]:
+            render_payment_card(payment, "in")
+        st.markdown("**Pending Income:**")
+        for payment in data["finances"]["pending_in"]:
+            render_payment_card(payment, "in")
+
+    with col2:
+        st.markdown("### 📤 Money Out")
+        for payment in data["finances"]["paid_out"]:
+            render_payment_card(payment, "out")
+        st.markdown("**Pending Payments:**")
+        for payment in data["finances"]["pending_out"]:
+            render_payment_card(payment, "out")
+
+    st.markdown("---")
+
+    # Budget breakdown chart
+    st.markdown("### 📊 Budget Breakdown")
+    fig = go.Figure(data=[go.Pie(
         labels=['Designer (Jared)', 'Misc Expenses', 'Your Profit'],
         values=[data['finances']['designer_total'], data['finances']['expenses_misc'], finances['profit']],
         hole=.6,
@@ -1499,16 +1831,27 @@ elif page == f"{ICONS['finances']} Finances":
         plot_bgcolor='rgba(0,0,0,0)',
         font_color='white',
         showlegend=True,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=-0.2,
+            xanchor="center",
+            x=0.5
+        )
+    )
+    st.plotly_chart(fig, use_container_width=True)
+        showlegend=True,
         legend=dict(orientation="h", yanchor="bottom", y=-0.2)
     )
     st.plotly_chart(fig, use_container_width=True)
 
 elif page == f"{ICONS['timeline']} Timeline":
-    st.markdown(f"# {ICONS['timeline']} 6-Week Timeline")
+    st.markdown(f"# {ICONS['timeline']} 6-Week Project Timeline")
     st.markdown("---")
-    
+
     current_week = data["project"]["current_week"]
-    
+
+    # Timeline progress overview
     weeks_timeline: List[TimelineWeek] = [
         {"week": 1, "title": "Kickoff & Activation", "dates": "Dec 2-8", "milestones": ["Designer activated", "Deposits paid", "Brand meeting", "Scope locked"]},
         {"week": 2, "title": "Photoshoot & Mockups", "dates": "Dec 9-15", "milestones": ["Photoshoot done", "Mockups ready", "Terry reviews", "Feedback in"]},
@@ -1517,26 +1860,115 @@ elif page == f"{ICONS['timeline']} Timeline":
         {"week": 5, "title": "Polish (New Year)", "dates": "Dec 30-Jan 5", "milestones": ["Mobile optimization", "Speed tuning", "Bug fixes", "Final tweaks"]},
         {"week": 6, "title": "LAUNCH 🚀", "dates": "Jan 6-12", "milestones": ["Final QA", "Train Liza", "Last payments", "GO LIVE"]}
     ]
-    
-    for w in weeks_timeline:
+
+    # Timeline progress calculation
+    completed_weeks = sum(1 for w in weeks_timeline if w["week"] < current_week)
+    timeline_progress = (completed_weeks / len(weeks_timeline)) * 100
+
+    # Progress overview card
+    st.markdown(f'''
+    <div class="stat-card" style="margin-bottom: 32px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <div>
+                <div style="font-size: 20px; color: {COLORS['gold']}; margin-bottom: 4px;">📈 Timeline Progress</div>
+                <div style="font-size: 14px; color: {COLORS['text_muted']};">Week {current_week} of {len(weeks_timeline)}</div>
+            </div>
+            <div style="text-align: center;">
+                {render_progress_ring(timeline_progress, 80, "#8b5cf6", "")}
+            </div>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <div class="stat-value">{completed_weeks}/{len(weeks_timeline)}</div>
+                <div class="stat-label">Weeks Completed</div>
+            </div>
+            <div style="text-align: right;">
+                <div style="font-size: 18px; color: {COLORS['gold']}; font-weight: 600;">{timeline_progress:.0f}%</div>
+                <div style="font-size: 12px; color: {COLORS['text_muted']};">Overall Progress</div>
+            </div>
+        </div>
+    </div>
+    ''', unsafe_allow_html=True)
+
+    # Visual timeline with proper styling
+    st.markdown('<div class="timeline-container">', unsafe_allow_html=True)
+
+    for i, w in enumerate(weeks_timeline):
         is_current: bool = w["week"] == current_week
         is_complete: bool = w["week"] < current_week
-        icon = ICONS["week_complete"] if is_complete else (ICONS["week_current"] if is_current else ICONS["week_upcoming"])
-        
-        with st.expander(f"{icon} Week {w['week']}: {w['title']} ({w['dates']})", expanded=is_current):
-            col1, col2 = st.columns([2, 1])
-            
-            with col1:
-                st.markdown("**Milestones:**")
-                for m in w["milestones"]:
-                    st.markdown(f"✓ {m}")
-            
-            with col2:
-                week_tasks = [t for t in data["tasks"] if t["week"] == w["week"]]
-                st.markdown("**Tasks:**")
-                for t in week_tasks:
-                    icon_task = ICONS["completed"] if t["status"] == "completed" else ICONS["pending"]
-                    st.markdown(f"{icon_task} {t['task'][:30]}...")
+        is_upcoming: bool = w["week"] > current_week
+
+        # Determine status and styling
+        if is_complete:
+            status_class = "completed"
+            bg_color = f"background: linear-gradient(145deg, {COLORS['success']}20, {COLORS['card_light']} 100%); border-left: 4px solid {COLORS['success']};"
+            icon = ICONS["week_complete"]
+        elif is_current:
+            status_class = "current"
+            bg_color = f"background: linear-gradient(145deg, {COLORS['gold']}20, {COLORS['card_light']} 100%); border-left: 4px solid {COLORS['gold']};"
+            icon = ICONS["week_current"]
+        else:
+            status_class = "upcoming"
+            bg_color = f"background: linear-gradient(145deg, {COLORS['card_light']} 0%, {COLORS['dark_bg']} 100%); border-left: 4px solid {COLORS['text_muted']};"
+            icon = ICONS["week_upcoming"]
+
+        # Week tasks progress
+        week_tasks = [t for t in data["tasks"] if t["week"] == w["week"]]
+        completed_tasks = len([t for t in week_tasks if t["status"] == "completed"])
+        total_tasks = len(week_tasks)
+        task_progress = (completed_tasks / total_tasks * 100) if total_tasks > 0 else 0
+
+        # Timeline item HTML
+        timeline_html = f'''
+        <div class="timeline-item {status_class}" style="{bg_color}">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                <div>
+                    <div style="font-size: 18px; font-weight: 600; color: {COLORS['gold']}; margin-bottom: 4px;">
+                        {icon} Week {w['week']}: {w['title']}
+                    </div>
+                    <div style="font-size: 14px; color: {COLORS['text_muted']}; margin-bottom: 8px;">
+                        📅 {w['dates']}
+                    </div>
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-size: 14px; color: {COLORS['text_muted']}; margin-bottom: 4px;">Tasks</div>
+                    <div style="font-size: 18px; font-weight: 600; color: {COLORS['gold']};">{completed_tasks}/{total_tasks}</div>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 16px;">
+                <div style="font-size: 14px; font-weight: 500; color: white; margin-bottom: 8px;">🎯 Milestones:</div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px;">
+        '''
+
+        for milestone in w["milestones"]:
+            timeline_html += f'<div style="font-size: 13px; color: {COLORS["text_dark"]};">• {milestone}</div>'
+
+        timeline_html += '</div></div>'
+
+        # Add task progress bar if there are tasks
+        if total_tasks > 0:
+            timeline_html += f'''
+            <div style="margin-top: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <div style="font-size: 14px; font-weight: 500; color: white;">📋 Task Progress</div>
+                    <div style="font-size: 12px; color: {COLORS['text_muted']};">{task_progress:.0f}%</div>
+                </div>
+                <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.2); border-radius: 3px; overflow: hidden;">
+                    <div style="width: {task_progress}%; height: 100%; background: linear-gradient(90deg, {COLORS['gold']}, #f4d03f); border-radius: 3px; transition: width 0.3s ease;"></div>
+                </div>
+            </div>
+            '''
+
+        timeline_html += '</div>'
+
+        # Add timeline line (except for last item)
+        if i < len(weeks_timeline) - 1:
+            timeline_html += '<div class="timeline-line"></div>'
+
+        st.markdown(timeline_html, unsafe_allow_html=True)
+
+    st.markdown('</div>', unsafe_allow_html=True)  # Close timeline-container
 
 elif page == f"{ICONS['contacts']} Contacts":
     st.markdown(f"# {ICONS['contacts']} Key Contacts & Communication")
